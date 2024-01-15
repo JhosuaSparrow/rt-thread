@@ -1,34 +1,20 @@
 /*
- * Copyright (c) 2006-2022, RT-Thread Development Team
- * Copyright (c) 2022, Xiaohua Semiconductor Co., Ltd.
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date           Author       Notes
- * 2022-04-28     CDT          first version
- */
+* @Author: Jack Sun
+* @Date:   2024-01-08 14:07:06
+* @Last Modified by:   jack.sun
+* @Last Modified time: 2024-01-13 17:42:40
+*/
 
 #include <rtthread.h>
 #include <rtdevice.h>
 #include <board.h>
+#include <led.h>
+#include <uart.h>
 
 
-/* defined the LED_GREEN pin: PC9 */
-#define LED_GREEN_PIN GET_PIN(C, 9)
-
-
-int main(void)
+void main(void)
 {
-    /* set LED_GREEN_PIN pin mode to output */
-    rt_pin_mode(LED_GREEN_PIN, PIN_MODE_OUTPUT);
-
-    while (1)
-    {
-        rt_pin_write(LED_GREEN_PIN, PIN_HIGH);
-        rt_thread_mdelay(500);
-        rt_pin_write(LED_GREEN_PIN, PIN_LOW);
-        rt_thread_mdelay(500);
-    }
+    set_led_enable(2, 1);
+    led_show_running();
+    uart_start_running();
 }
-

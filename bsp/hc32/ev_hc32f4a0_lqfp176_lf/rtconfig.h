@@ -89,6 +89,19 @@
 
 /* Using USB */
 
+#define RT_USING_USB
+#define RT_USING_USB_DEVICE
+#define RT_USBD_THREAD_STACK_SZ 4096
+#define USB_VENDOR_ID 0x0FFE
+#define USB_PRODUCT_ID 0x0001
+#define RT_USB_DEVICE_COMPOSITE
+#define RT_USB_DEVICE_CDC
+#define RT_USB_DEVICE_NONE
+#define RT_VCOM_TASK_STK_SIZE 512
+#define RT_CDC_RX_BUFSIZE 128
+#define RT_VCOM_SERNO "32021919830108"
+#define RT_VCOM_SER_LEN 14
+#define RT_VCOM_TX_TIMEOUT 1000
 
 /* C/C++ and POSIX layer */
 
@@ -259,6 +272,15 @@
 #define BSP_USING_GPIO
 #define BSP_USING_UART
 #define BSP_USING_UART1
+#define BSP_USING_UART2
+#define BSP_USING_UART3
+#define BSP_USING_UART4
+#define BSP_USING_UART5
+#define BSP_USING_UART6
+#define BSP_USING_UART7
+#define BSP_USING_UART8
+#define BSP_USING_UART9
+#define BSP_USING_UART10
 
 /* Board extended module Drivers */
 
