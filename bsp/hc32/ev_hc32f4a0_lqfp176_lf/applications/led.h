@@ -5,9 +5,10 @@
 * @Last Modified time: 2024-01-12 11:32:15
 */
 
+#include <rtdef.h>
+
+rt_err_t set_led_enable(rt_uint8_t led_no, rt_uint8_t enable);
+rt_uint8_t get_led_enable(rt_uint8_t led_no);
 void led_init(void);
-int set_led_enable(int led_no, int enable);
-int get_led_enable(int led_no);
-void led_onoff(int led_no, int pin_level);
 void led_show_thread(void *args);
-int led_show_running(void);
+rt_err_t led_show_running(void);
