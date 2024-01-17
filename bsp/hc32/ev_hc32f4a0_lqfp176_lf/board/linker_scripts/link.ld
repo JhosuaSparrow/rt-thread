@@ -90,6 +90,13 @@ SECTIONS
         *(.rodata)
         *(.rodata*)
         . = ALIGN(4);
+
+        /* section information for RT-thread AT package */
+        . = ALIGN(4);
+        __rtatcmdtab_start = .;
+        KEEP(*(RtAtCmdTab))
+        __rtatcmdtab_end = .;
+        . = ALIGN(4);
     } >FLASH
 
     .ARM.extab :

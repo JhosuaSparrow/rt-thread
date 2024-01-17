@@ -2,7 +2,7 @@
 * @Author: Jack Sun
 * @Date:   2024-01-12 14:11:40
 * @Last Modified by:   jack.sun
-* @Last Modified time: 2024-01-16 14:15:20
+* @Last Modified time: 2024-01-16 14:26:36
 */
 
 #include <stdio.h>
@@ -123,7 +123,7 @@ void serial_thread_entry(void *parameter)
             sprintf(msg, "rt_mq_recv data res %d\r\n", res);
             uart_write(msg, RT_NULL, buf.serial);
 
-            recv_size = rt_device_read(buf.serial, 0, &recv_buf, 64);
+            recv_size = rt_device_read(buf.serial, -1, &recv_buf, 64);
             sprintf(msg, "rt_mq_recv recv_size %d, recv_buf size %d, length %d\r\n", recv_size, sizeof(recv_buf), strlen(recv_buf));
             uart_write(msg, RT_NULL, buf.serial);
 
