@@ -192,4 +192,13 @@ void rt_hw_us_delay(rt_uint32_t us)
     while (delta < us_tick * us);
 }
 
+void rt_hw_ms_delay(rt_uint32_t ms)
+{
+    for(int i = 0; i < ms; i++) {
+        for(int j = 0; j < 10; j++) {
+            rt_hw_us_delay(100);
+        }
+    }
+}
+
 /*@}*/

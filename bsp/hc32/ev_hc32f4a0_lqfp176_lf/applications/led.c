@@ -2,7 +2,7 @@
 * @Author: Jack Sun
 * @Date:   2024-01-08 14:07:06
 * @Last Modified by:   jack.sun
-* @Last Modified time: 2024-01-15 13:57:34
+* @Last Modified time: 2024-01-18 10:13:31
 */
 #include <rtthread.h>
 #include <rtdevice.h>
@@ -87,7 +87,7 @@ rt_err_t led_show_running(void)
     rt_thread_t tid;
     rt_err_t ret = RT_EOK;
 
-    tid = rt_thread_create("led", led_show_thread, RT_NULL, 1024, RT_THREAD_PRIORITY_MAX / 3, 20);
+    tid = rt_thread_create("led", led_show_thread, RT_NULL, 0x1000, RT_THREAD_PRIORITY_MAX / 3, 20);
     if (tid != RT_NULL)
     {
         rt_thread_startup(tid);

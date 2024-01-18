@@ -2,7 +2,7 @@
 * @Author: Jack Sun
 * @Date:   2024-01-16 19:47:45
 * @Last Modified by:   jack.sun
-* @Last Modified time: 2024-01-17 17:05:26
+* @Last Modified time: 2024-01-18 10:13:14
 */
 
 #include <string.h>
@@ -227,7 +227,7 @@ rt_err_t atcmd_server_send_vbat_running(void)
     rt_thread_t tid;
     rt_err_t ret = RT_EOK;
 
-    tid = rt_thread_create("sendvbat", atcmd_server_send_vbat, RT_NULL, 2048, RT_THREAD_PRIORITY_MAX / 3, 20);
+    tid = rt_thread_create("sendvbat", atcmd_server_send_vbat, RT_NULL, 0x2000, RT_THREAD_PRIORITY_MAX / 3, 20);
     if (tid != RT_NULL)
     {
         rt_thread_startup(tid);

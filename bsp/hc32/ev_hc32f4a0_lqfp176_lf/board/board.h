@@ -41,3 +41,5 @@ extern int __bss_end;
 #endif
 
 #endif
+
+void rt_hw_ms_delay(rt_uint32_t ms);
