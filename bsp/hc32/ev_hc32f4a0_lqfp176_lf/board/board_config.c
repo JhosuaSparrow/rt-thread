@@ -31,6 +31,13 @@ rt_err_t rt_hw_board_uart_init(CM_USART_TypeDef *USARTx)
         GPIO_SetFunc(USART1_TX_PORT, USART1_TX_PIN, GPIO_FUNC_32);
         break;
 #endif
+#if defined(BSP_USING_UART2)
+    case (rt_uint32_t)CM_USART2:
+        /* Configure USART RX/TX pin. */
+        GPIO_SetFunc(USART2_RX_PORT, USART2_RX_PIN, GPIO_FUNC_35);
+        GPIO_SetFunc(USART2_TX_PORT, USART2_TX_PIN, GPIO_FUNC_34);
+        break;
+#endif
 #if defined(BSP_USING_UART6)
     case (rt_uint32_t)CM_USART6:
         /* Configure USART RX/TX pin. */

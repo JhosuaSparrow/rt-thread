@@ -2,7 +2,7 @@
 * @Author: Jack Sun
 * @Date:   2024-01-16 14:36:02
 * @Last Modified by:   jack.sun
-* @Last Modified time: 2024-01-18 10:18:07
+* @Last Modified time: 2024-01-18 10:47:35
 */
 
 #include <rtthread.h>
@@ -16,33 +16,23 @@
 
 #define RESET_BUTTON_NUM          GET_PIN(D, 10)
 
-static struct rt_semaphore btnrst_sem;
-// static rt_sem_t btnrst_sem;
+static rt_sem_t btnrst_sem;
 static rt_uint8_t reset_running = 0;
 
 
 void button_event_thread(void *args)
 {
     rt_err_t recv_res, reset_res;
-    rt_uint8_t retry = 3;
     while (1)
     {
-        recv_res = rt_sem_take(&btnrst_sem, RT_WAITING_FOREVER);
+        recv_res = rt_sem_take(btnrst_sem, RT_WAITING_FOREVER);
         LOG_D("recev btnrst_sem");
         if (recv_res == RT_EOK)
         {
             for (rt_uint8_t i = 0; i < 10; i++)
             {
-                for (rt_uint8_t j = 0; j < retry; j++)
-                {
-                    reset_res = atcmd_reset(i, 3);
-                    LOG_D("atcmd_reset client_id %d reset_res %d", i, reset_res);
-                    if (reset_res == RT_EOK)
-                    {
-                        break;
-                    }
-                    rt_thread_mdelay(100);
-                }
+                reset_res = atcmd_reset(i, 3);
+                LOG_D("atcmd_reset client_id %d reset_res %d", i, reset_res);
             }
             reset_running = 0;
         }
@@ -62,7 +52,7 @@ void irq_callback(void *args)
             if (reset_running == 0)
             {
                 reset_running = 1;
-                rt_err_t res = rt_sem_release(&btnrst_sem);
+                rt_err_t res = rt_sem_release(btnrst_sem);
                 if (res == RT_EOK)
                 {
                     LOG_D("rt_sem_release success.");
@@ -104,8 +94,7 @@ rt_err_t button_event_running(void)
 
 void reset_button_init(void)
 {
-    rt_sem_init(&btnrst_sem, "btnrst", 0, RT_IPC_FLAG_FIFO);
-    // btnrst_sem = rt_sem_create("btnrst", 0, RT_IPC_FLAG_FIFO);
+    btnrst_sem = rt_sem_create("btnrst", 0, RT_IPC_FLAG_FIFO);
     button_event_running();
     rt_pin_mode(RESET_BUTTON_NUM, PIN_MODE_INPUT_PULLUP);
     rt_pin_attach_irq(RESET_BUTTON_NUM, PIN_IRQ_MODE_FALLING, irq_callback, RT_NULL);

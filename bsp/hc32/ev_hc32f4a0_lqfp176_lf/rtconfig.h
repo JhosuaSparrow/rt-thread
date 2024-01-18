@@ -127,7 +127,7 @@
 
 #define RT_USING_AT
 #define AT_USING_SERVER
-#define AT_SERVER_DEVICE "uart6"
+#define AT_SERVER_DEVICE "uart2"
 #define AT_SERVER_RECV_BUFF_LEN 256
 #define AT_SERVER_SEND_BUFF_LEN 256
 #define AT_CMD_END_MARK_CRLF

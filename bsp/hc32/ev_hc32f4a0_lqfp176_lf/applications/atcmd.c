@@ -2,7 +2,7 @@
 * @Author: Jack Sun
 * @Date:   2024-01-16 19:47:45
 * @Last Modified by:   jack.sun
-* @Last Modified time: 2024-01-18 10:13:14
+* @Last Modified time: 2024-01-18 10:45:33
 */
 
 #include <string.h>
@@ -190,7 +190,7 @@ at_result_t atcmd_server_find_setup(const char *args)
         {
             for (rt_uint8_t i=0; i<10; i++)
             {
-                if (strcmp(USART_CLIENTS[i].imei, imei) == 0 || i == 1)
+                if (strcmp(USART_CLIENTS[i].imei, imei) == 0 && strlen(USART_CLIENTS[i].imei) != 0)
                 {
                     res = set_led_enable(USART_CLIENTS[i].id, enable);
                     LOG_D("set_led_enable led no %d, enable %d, res %d", USART_CLIENTS[i].id, enable, res);
