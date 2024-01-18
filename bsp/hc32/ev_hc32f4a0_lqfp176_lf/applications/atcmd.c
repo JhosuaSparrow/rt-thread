@@ -2,10 +2,9 @@
 * @Author: Jack Sun
 * @Date:   2024-01-16 19:47:45
 * @Last Modified by:   jack.sun
-* @Last Modified time: 2024-01-18 10:45:33
+* @Last Modified time: 2024-01-18 11:21:10
 */
 
-#include <string.h>
 #include <rtthread.h>
 #include <rtdevice.h>
 #include <board.h>
@@ -16,7 +15,7 @@
 #include <lf_log.h>
 
 #define AT_CLIENT_BUFSZ     512
-#define AT_CLIENT_TIMEOUT   3000
+#define AT_CLIENT_TIMEOUT   1500
 
 #define GROUP_ID          "UNIQUE_ID"
 
@@ -128,7 +127,7 @@ rt_err_t atcmd_reset(rt_uint8_t client_id, rt_uint8_t retry_count)
 {
     char cmd[] = "AT+RESET";
     at_response_t resp = at_create_resp(AT_CLIENT_BUFSZ, 0, AT_CLIENT_TIMEOUT);
-    rt_err_t res = atcmd_client_send(cmd, client_id, 0, 3, resp);
+    rt_err_t res = atcmd_client_send(cmd, client_id, 0, retry_count, resp);
     at_delete_resp(resp);
     return res;
 }
@@ -139,7 +138,7 @@ rt_err_t atcmd_query_imei(rt_uint8_t client_id, rt_uint8_t retry_count)
 
     char cmd[] = "AT+IMEI?";
     at_response_t resp = at_create_resp(AT_CLIENT_BUFSZ, 0, AT_CLIENT_TIMEOUT);
-    rt_err_t res = atcmd_client_send(cmd, client_id, 3, 3, resp);
+    rt_err_t res = atcmd_client_send(cmd, client_id, 3, retry_count, resp);
     if (res == RT_EOK)
     {
         at_resp_parse_line_args(resp, 1,"+IMEI:%s", USART_CLIENTS[client_id].imei);
@@ -155,24 +154,22 @@ rt_err_t atcmd_query_vbat(rt_uint8_t client_id, rt_uint8_t retry_count)
 
     char cmd[] = "AT+VBAT?";
     at_response_t resp = at_create_resp(AT_CLIENT_BUFSZ, 0, AT_CLIENT_TIMEOUT);
-    rt_err_t res = atcmd_client_send(cmd, client_id, 3, 3, resp);
+    rt_err_t res = atcmd_client_send(cmd, client_id, 3, retry_count, resp);
     if (res == RT_EOK)
     {
         at_resp_parse_line_args(resp, 1, "%*[^:]:%[^,],%[^,],%s", USART_CLIENTS[client_id].imei, USART_CLIENTS[client_id].vbat, USART_CLIENTS[client_id].level);
         LOG_D("client_id %d, imei %s, vbat %s, level %s", client_id, USART_CLIENTS[client_id].imei, USART_CLIENTS[client_id].vbat, USART_CLIENTS[client_id].level);
     }
+    else
+    {
+        rt_strcpy(USART_CLIENTS[client_id].imei, "");
+        rt_strcpy(USART_CLIENTS[client_id].vbat, "");
+        rt_strcpy(USART_CLIENTS[client_id].level, "");
+    }
     at_delete_resp(resp);
     return res;
 }
 
-
-void atcmd_clients_query_vbat(void)
-{
-    for (rt_uint8_t i=0; i<10; i++)
-    {
-        atcmd_query_vbat(i, 3);
-    }
-}
 
 at_result_t atcmd_server_find_setup(const char *args)
 {
@@ -186,11 +183,11 @@ at_result_t atcmd_server_find_setup(const char *args)
         enable = (chr_enable[0] == '1');
 
         LOG_D("find args %s group_id %s, imei %s, enable %d", args, group_id, imei, enable);
-        if (strcmp(group_id, GROUP_ID) == 0)
+        if (rt_strcmp(group_id, GROUP_ID) == 0)
         {
             for (rt_uint8_t i=0; i<10; i++)
             {
-                if (strcmp(USART_CLIENTS[i].imei, imei) == 0 && strlen(USART_CLIENTS[i].imei) != 0)
+                if (rt_strcmp(USART_CLIENTS[i].imei, imei) == 0 && rt_strlen(USART_CLIENTS[i].imei) != 0)
                 {
                     res = set_led_enable(USART_CLIENTS[i].id, enable);
                     LOG_D("set_led_enable led no %d, enable %d, res %d", USART_CLIENTS[i].id, enable, res);
@@ -214,8 +211,8 @@ void atcmd_server_send_vbat(void *args)
     {
         for (rt_uint8_t i=0; i<10; i++)
         {
+            atcmd_query_vbat(i, 3);
             at_server_printfln("+VBAT:%s,%d,%s,%s,%s", GROUP_ID, USART_CLIENTS[i].id, USART_CLIENTS[i].imei, USART_CLIENTS[i].vbat, USART_CLIENTS[i].level);
-            rt_thread_mdelay(100);
         }
         rt_thread_mdelay(60 * 1000);
     }
