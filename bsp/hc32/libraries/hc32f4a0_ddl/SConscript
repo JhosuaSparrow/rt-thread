@@ -62,10 +62,36 @@ if GetDepend(['RT_USING_ON_CHIP_FLASH']):
 if GetDepend(['RT_USING_HWTIMER']) or GetDepend(['RT_USING_PWM'] or GetDepend(['RT_USING_PULSE_ENCODER'])):
     src += ['drivers/hc32_ll_driver/src/hc32_ll_tmra.c']
 
+if GetDepend(['RT_USING_USB']):
+    src += ['drivers/hc32_ll_driver/src/hc32_ll_usb.c']
+    src += ['drivers/hc32_ll_driver/src/hc32_ll_keyscan.c']
+    src += ['drivers/hc32_ll_driver/src/hc32_ll_fcm.c']
+    src += ['drivers/bsp/ev_hc32f4a0_lqfp176/ev_hc32f4a0_lqfp176.c']
+    # src += ['drivers/bsp/ev_hc32f4a0_lqfp176/ev_hc32f4a0_lqfp176_tca9539.c']
+    # src += ['drivers/bsp/components/tca9539/tca9539.c']
+
+if GetDepend(['RT_USING_USB_DEVICE']):
+    src += Glob('midwares/hc32/usb/usb_device_lib/device_core/*.c')
+
+if GetDepend(['RT_USB_DEVICE_CDC']):
+    src += ['midwares/hc32/usb/usb_device_lib/device_class/single_cdc/usb_dev_cdc_class.c']
+
 path = [
     cwd + '/drivers/cmsis/Device/HDSC/hc32f4xx/Include',
     cwd + '/drivers/cmsis/Include',
     cwd + '/drivers/hc32_ll_driver/inc',]
+
+if GetDepend(['RT_USING_USB']):
+    path += [
+        cwd + '/midwares/hc32/usb',
+        cwd + '/drivers/bsp/ev_hc32f4a0_lqfp176',
+        cwd + '/drivers/bsp/components/tca9539']
+
+if GetDepend(['RT_USING_USB_DEVICE']):
+    path += [cwd + '/midwares/hc32/usb/usb_device_lib/device_core']
+
+if GetDepend(['RT_USB_DEVICE_CDC']):
+    path += [cwd + '/midwares/hc32/usb/usb_device_lib/device_class/single_cdc']
 
 CPPDEFINES = ['USE_DDL_DRIVER']
 

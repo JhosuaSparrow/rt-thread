@@ -7,8 +7,12 @@
 
 #include <rtdef.h>
 
-rt_err_t set_led_enable(rt_uint8_t led_no, rt_uint8_t enable);
-rt_uint8_t get_led_enable(rt_uint8_t led_no);
+rt_uint16_t get_led_enable(rt_uint16_t led_no);
+rt_err_t set_led_enable(rt_uint16_t led_no, rt_uint16_t enable);
 void led_init(void);
+void led_on(rt_uint8_t led_id);
+void led_off(rt_uint8_t led_id);
+void led_toggle(rt_uint8_t led_id);
+rt_uint8_t led_state(rt_uint8_t led_id);
 void led_show_thread(void *args);
 rt_err_t led_show_running(void);

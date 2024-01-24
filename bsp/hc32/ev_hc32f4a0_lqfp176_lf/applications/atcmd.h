@@ -1,8 +1,8 @@
-#include <rtdef.h>
-#include <at.h>
+#include "rtdef.h"
+#include "at.h"
 
-rt_err_t atcmd_set_client_enable(rt_uint8_t client_id, rt_uint8_t enable);
-rt_uint8_t atcmd_get_client_enable(rt_uint8_t client_id);
+rt_uint16_t atcmd_get_client_enable(rt_uint16_t client_id);
+rt_err_t atcmd_set_client_enable(rt_uint16_t client_id, rt_uint16_t enable);
 rt_err_t atcmd_client_init(void);
 rt_err_t atcmd_client_send(char *cmd, rt_uint8_t client_id, rt_uint8_t recv_line_size, rt_uint8_t retry_count, at_response_t resp);
 rt_err_t atcmd_reset(rt_uint8_t client_id, rt_uint8_t retry_count);

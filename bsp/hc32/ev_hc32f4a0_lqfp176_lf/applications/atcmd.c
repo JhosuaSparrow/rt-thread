@@ -1,15 +1,15 @@
 /*
 * @Author: Jack Sun
 * @Date:   2024-01-16 19:47:45
-* @Last Modified by:   jack.sun
-* @Last Modified time: 2024-01-18 11:21:10
+* @Last Modified by:   JhosuaSparrow
+* @Last Modified time: 2024-01-22 17:29:49
 */
 
 #include <rtthread.h>
 #include <rtdevice.h>
 #include <board.h>
-#include <at.h>
-#include <led.h>
+#include "at.h"
+#include "led.h"
 
 #define LOG_TAG             "lf.atcmd"
 #include <lf_log.h>
@@ -42,7 +42,7 @@ typedef struct
 } at_usart_client_t;
 
 
-static rt_uint8_t CLINET_ENABLE = 0;
+static rt_uint16_t CLINET_ENABLE = 0;
 
 static at_usart_client_t USART_CLIENTS[10] = {
     {UART1_NAME, 1, RT_NULL, RT_NULL, RT_NULL},
@@ -58,7 +58,15 @@ static at_usart_client_t USART_CLIENTS[10] = {
 };
 
 
-rt_err_t atcmd_set_client_enable(rt_uint8_t client_id, rt_uint8_t enable)
+rt_uint16_t atcmd_get_client_enable(rt_uint16_t client_id)
+{
+    rt_uint16_t _enable_ = 0;
+    _enable_ = CLINET_ENABLE & (1 << (client_id - 1));
+    return _enable_;
+}
+
+
+rt_err_t atcmd_set_client_enable(rt_uint16_t client_id, rt_uint16_t enable)
 {
     if (enable)
     {
@@ -68,23 +76,18 @@ rt_err_t atcmd_set_client_enable(rt_uint8_t client_id, rt_uint8_t enable)
     {
         CLINET_ENABLE &= (~(1 << (client_id - 1)));
     }
+    rt_uint16_t state = atcmd_get_client_enable(client_id);
+    LOG_D("atcmd_set_client_enable %d %d state %d", client_id, enable, state);
     return RT_EOK;
-}
-
-
-rt_uint8_t atcmd_get_client_enable(rt_uint8_t client_id)
-{
-    rt_uint8_t _enable_ = 0;
-    _enable_ = CLINET_ENABLE & (1 << (client_id - 1));
-    return _enable_;
 }
 
 
 rt_err_t atcmd_client_init(void)
 {
+    rt_err_t res = RT_ERROR;
     for (rt_uint8_t i=0; i<10; i++)
     {
-        if (atcmd_get_client_enable(i + 1))
+        if (atcmd_get_client_enable(i + 1) != 0)
         {
             LOG_D("USART_CLIENTS[i].name %s", USART_CLIENTS[i].name);
             rt_err_t res = at_client_init(USART_CLIENTS[i].name, AT_CLIENT_BUFSZ, AT_CLIENT_BUFSZ);
@@ -94,7 +97,12 @@ rt_err_t atcmd_client_init(void)
                 at_obj_set_end_sign(USART_CLIENTS[i].client, '\n');
             }
         }
+        else
+        {
+            LOG_D("USART_CLIENTS[i].name %s is not enable.", USART_CLIENTS[i].name);
+        }
     }
+    return res;
 }
 
 
@@ -173,7 +181,8 @@ rt_err_t atcmd_query_vbat(rt_uint8_t client_id, rt_uint8_t retry_count)
 
 at_result_t atcmd_server_find_setup(const char *args)
 {
-    rt_err_t res = AT_RESULT_FAILE;
+    at_result_t res = AT_RESULT_FAILE;
+    rt_err_t _res = RT_ERROR;
     char group_id[16];
     char imei[16];
     char chr_enable[1];
@@ -189,13 +198,13 @@ at_result_t atcmd_server_find_setup(const char *args)
             {
                 if (rt_strcmp(USART_CLIENTS[i].imei, imei) == 0 && rt_strlen(USART_CLIENTS[i].imei) != 0)
                 {
-                    res = set_led_enable(USART_CLIENTS[i].id, enable);
-                    LOG_D("set_led_enable led no %d, enable %d, res %d", USART_CLIENTS[i].id, enable, res);
+                    _res = set_led_enable(USART_CLIENTS[i].id, enable);
+                    LOG_D("set_led_enable led no %d, enable %d, _res %d", USART_CLIENTS[i].id, enable, _res);
                 }
             }
         }
     }
-    if (res == RT_EOK)
+    if (_res == RT_EOK)
     {
         res = AT_RESULT_OK;
     }

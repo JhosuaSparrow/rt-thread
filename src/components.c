@@ -236,6 +236,9 @@ void rt_application_init(void)
  */
 int rtthread_startup(void)
 {
+    extern void usb_cdc_init(void);
+    usb_cdc_init();
+
 #ifdef RT_USING_SMP
     rt_hw_spin_lock_init(&_cpus_lock);
 #endif

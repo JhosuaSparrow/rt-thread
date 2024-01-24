@@ -38,11 +38,60 @@ rt_err_t rt_hw_board_uart_init(CM_USART_TypeDef *USARTx)
         GPIO_SetFunc(USART2_TX_PORT, USART2_TX_PIN, GPIO_FUNC_34);
         break;
 #endif
+#if defined(BSP_USING_UART3)
+    case (rt_uint32_t)CM_USART3:
+        /* Configure USART RX/TX pin. */
+        GPIO_SetFunc(USART3_RX_PORT, USART3_RX_PIN, GPIO_FUNC_33);
+        GPIO_SetFunc(USART3_TX_PORT, USART3_TX_PIN, GPIO_FUNC_32);
+        break;
+#endif
+#if defined(BSP_USING_UART4)
+    case (rt_uint32_t)CM_USART4:
+        /* Configure USART RX/TX pin. */
+        GPIO_SetFunc(USART4_RX_PORT, USART4_RX_PIN, GPIO_FUNC_33);
+        GPIO_SetFunc(USART4_TX_PORT, USART4_TX_PIN, GPIO_FUNC_32);
+        break;
+#endif
+#if defined(BSP_USING_UART5)
+    case (rt_uint32_t)CM_USART5:
+        /* Configure USART RX/TX pin. */
+        GPIO_SetFunc(USART5_RX_PORT, USART5_RX_PIN, GPIO_FUNC_35);
+        GPIO_SetFunc(USART5_TX_PORT, USART5_TX_PIN, GPIO_FUNC_34);
+        break;
+#endif
 #if defined(BSP_USING_UART6)
     case (rt_uint32_t)CM_USART6:
         /* Configure USART RX/TX pin. */
         GPIO_SetFunc(USART6_RX_PORT, USART6_RX_PIN, GPIO_FUNC_37);
         GPIO_SetFunc(USART6_TX_PORT, USART6_TX_PIN, GPIO_FUNC_36);
+        break;
+#endif
+#if defined(BSP_USING_UART7)
+    case (rt_uint32_t)CM_USART7:
+        /* Configure USART RX/TX pin. */
+        GPIO_SetFunc(USART7_RX_PORT, USART7_RX_PIN, GPIO_FUNC_39);
+        GPIO_SetFunc(USART7_TX_PORT, USART7_TX_PIN, GPIO_FUNC_38);
+        break;
+#endif
+#if defined(BSP_USING_UART8)
+    case (rt_uint32_t)CM_USART8:
+        /* Configure USART RX/TX pin. */
+        GPIO_SetFunc(USART8_RX_PORT, USART8_RX_PIN, GPIO_FUNC_35);
+        GPIO_SetFunc(USART8_TX_PORT, USART8_TX_PIN, GPIO_FUNC_34);
+        break;
+#endif
+#if defined(BSP_USING_UART9)
+    case (rt_uint32_t)CM_USART9:
+        /* Configure USART RX/TX pin. */
+        GPIO_SetFunc(USART9_RX_PORT, USART9_RX_PIN, GPIO_FUNC_37);
+        GPIO_SetFunc(USART9_TX_PORT, USART9_TX_PIN, GPIO_FUNC_36);
+        break;
+#endif
+#if defined(BSP_USING_UART10)
+    case (rt_uint32_t)CM_USART10:
+        /* Configure USART RX/TX pin. */
+        GPIO_SetFunc(USART10_RX_PORT, USART10_RX_PIN, GPIO_FUNC_39);
+        GPIO_SetFunc(USART10_TX_PORT, USART10_TX_PIN, GPIO_FUNC_38);
         break;
 #endif
     default:
