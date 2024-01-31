@@ -380,23 +380,9 @@
           <GroupName>Applications</GroupName>
           <Files>
             <File>
-              <FileName>usb_dev_user.c</FileName>
+              <FileName>main.c</FileName>
               <FileType>1</FileType>
-              <FilePath>applications\usb_dev_user.c</FilePath>
-            </File>
-          </Files>
-          <Files>
-            <File>
-              <FileName>usb_bsp.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>applications\usb_bsp.c</FilePath>
-            </File>
-          </Files>
-          <Files>
-            <File>
-              <FileName>usb_cdc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>applications\usb_cdc.c</FilePath>
+              <FilePath>applications\main.c</FilePath>
             </File>
           </Files>
           <Files>
@@ -415,16 +401,16 @@
           </Files>
           <Files>
             <File>
-              <FileName>cdc_data_process.c</FileName>
+              <FileName>usb_bsp.c</FileName>
               <FileType>1</FileType>
-              <FilePath>applications\cdc_data_process.c</FilePath>
+              <FilePath>applications\usb_bsp.c</FilePath>
             </File>
           </Files>
           <Files>
             <File>
-              <FileName>button.c</FileName>
+              <FileName>cdc_data_process.c</FileName>
               <FileType>1</FileType>
-              <FilePath>applications\button.c</FilePath>
+              <FilePath>applications\cdc_data_process.c</FilePath>
             </File>
           </Files>
           <Files>
@@ -436,9 +422,23 @@
           </Files>
           <Files>
             <File>
-              <FileName>main.c</FileName>
+              <FileName>button.c</FileName>
               <FileType>1</FileType>
-              <FilePath>applications\main.c</FilePath>
+              <FilePath>applications\button.c</FilePath>
+            </File>
+          </Files>
+          <Files>
+            <File>
+              <FileName>usb_dev_user.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>applications\usb_dev_user.c</FilePath>
+            </File>
+          </Files>
+          <Files>
+            <File>
+              <FileName>usb_cdc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>applications\usb_cdc.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -463,13 +463,6 @@
               <FileName>at_server.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\components\net\at\src\at_server.c</FilePath>
-            </File>
-          </Files>
-          <Files>
-            <File>
-              <FileName>at_cli.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\components\net\at\src\at_cli.c</FilePath>
             </File>
           </Files>
           <Files>
@@ -887,6 +880,13 @@
           </Files>
           <Files>
             <File>
+              <FileName>usb_dev_ctrleptrans.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_ctrleptrans.c</FilePath>
+            </File>
+          </Files>
+          <Files>
+            <File>
               <FileName>hc32_ll_usb.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_usb.c</FilePath>
@@ -915,13 +915,6 @@
           </Files>
           <Files>
             <File>
-              <FileName>usb_dev_core.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_core.c</FilePath>
-            </File>
-          </Files>
-          <Files>
-            <File>
               <FileName>hc32_ll_i2c.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_i2c.c</FilePath>
@@ -929,16 +922,16 @@
           </Files>
           <Files>
             <File>
-              <FileName>usb_dev_stdreq.c</FileName>
+              <FileName>hc32_ll_fcg.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_stdreq.c</FilePath>
+              <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_fcg.c</FilePath>
             </File>
           </Files>
           <Files>
             <File>
-              <FileName>hc32_ll_fcg.c</FileName>
+              <FileName>usb_dev_int.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_fcg.c</FilePath>
+              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_int.c</FilePath>
             </File>
           </Files>
           <Files>
@@ -953,6 +946,13 @@
               <FileName>hc32_ll_pwc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_pwc.c</FilePath>
+            </File>
+          </Files>
+          <Files>
+            <File>
+              <FileName>usb_dev_stdreq.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_stdreq.c</FilePath>
             </File>
           </Files>
           <Files>
@@ -978,16 +978,16 @@
           </Files>
           <Files>
             <File>
-              <FileName>usb_dev_ctrleptrans.c</FileName>
+              <FileName>hc32_ll_icg.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_ctrleptrans.c</FilePath>
+              <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_icg.c</FilePath>
             </File>
           </Files>
           <Files>
             <File>
-              <FileName>hc32_ll_icg.c</FileName>
+              <FileName>usb_dev_driver.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_icg.c</FilePath>
+              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_driver.c</FilePath>
             </File>
           </Files>
           <Files>
@@ -1013,6 +1013,13 @@
           </Files>
           <Files>
             <File>
+              <FileName>usb_dev_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_core.c</FilePath>
+            </File>
+          </Files>
+          <Files>
+            <File>
               <FileName>hc32_ll_keyscan.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_keyscan.c</FilePath>
@@ -1023,13 +1030,6 @@
               <FileName>hc32_ll_dma.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_dma.c</FilePath>
-            </File>
-          </Files>
-          <Files>
-            <File>
-              <FileName>usb_dev_int.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_int.c</FilePath>
             </File>
           </Files>
           <Files>
@@ -1055,13 +1055,6 @@
           </Files>
           <Files>
             <File>
-              <FileName>usb_dev_driver.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\libraries\hc32f4a0_ddl\midwares\hc32\usb\usb_device_lib\device_core\usb_dev_driver.c</FilePath>
-            </File>
-          </Files>
-          <Files>
-            <File>
               <FileName>hc32_ll_fcm.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\libraries\hc32f4a0_ddl\drivers\hc32_ll_driver\src\hc32_ll_fcm.c</FilePath>
@@ -1072,16 +1065,16 @@
           <GroupName>rt_usbd</GroupName>
           <Files>
             <File>
-              <FileName>usbdevice_core.c</FileName>
+              <FileName>cdc_vcom.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\components\drivers\usb\usbdevice\core\usbdevice_core.c</FilePath>
+              <FilePath>..\..\..\components\drivers\usb\usbdevice\class\cdc_vcom.c</FilePath>
             </File>
           </Files>
           <Files>
             <File>
-              <FileName>cdc_vcom.c</FileName>
+              <FileName>usbdevice_core.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\components\drivers\usb\usbdevice\class\cdc_vcom.c</FilePath>
+              <FilePath>..\..\..\components\drivers\usb\usbdevice\core\usbdevice_core.c</FilePath>
             </File>
           </Files>
           <Files>

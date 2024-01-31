@@ -29,53 +29,58 @@ extern "C"
 /*******************************************************************************
  * Include files
  ******************************************************************************/
+#include <rtdef.h>
 #include "usb_dev_cdc_class.h"
 
-/**
- * @addtogroup HC32F4A0_DDL_Applications
- * @{
- */
+  /**
+   * @addtogroup HC32F4A0_DDL_Applications
+   * @{
+   */
 
-/**
- * @addtogroup USB_Dev_Cdc
- * @{
- */
+  /**
+   * @addtogroup USB_Dev_Cdc
+   * @{
+   */
 
-/*******************************************************************************
- * Global type definitions ('typedef')
- ******************************************************************************/
-/* all needed parameters to be configured for the ComPort.
- * These parameters can modified on the fly by the host through CDC class
- * command class requests. */
-typedef struct {
+  /*******************************************************************************
+   * Global type definitions ('typedef')
+   ******************************************************************************/
+  /* all needed parameters to be configured for the ComPort.
+   * These parameters can modified on the fly by the host through CDC class
+   * command class requests. */
+  typedef struct
+  {
     uint32_t bitrate;
-    uint8_t  format;
-    uint8_t  paritytype;
-    uint8_t  datatype;
-} LINE_CODING;
+    uint8_t format;
+    uint8_t paritytype;
+    uint8_t datatype;
+  } LINE_CODING;
 
 /*******************************************************************************
  * Global pre-processor symbols/macros ('#define')
  ******************************************************************************/
-#define DEFAULT_CONFIG              (0U)
-#define OTHER_CONFIG                (1U)
+#define DEFAULT_CONFIG (0U)
+#define OTHER_CONFIG (1U)
 
-/*******************************************************************************
-  Global function prototypes (definition in C source)
- ******************************************************************************/
-extern void vcp_init(void);
-extern void vcp_deinit(void);
-extern void vcp_ctrlpare(uint32_t Cmd, uint8_t *Buf, uint32_t Len);
-extern void vcp_txdata(void);
-extern void vcp_rxdata(uint8_t *Buf, uint32_t Len);
+  /*******************************************************************************
+    Global function prototypes (definition in C source)
+   ******************************************************************************/
+  extern void vcp_init(void);
+  extern void vcp_deinit(void);
+  extern void vcp_ctrlpare(uint32_t Cmd, uint8_t *Buf, uint32_t Len);
+  extern void vcp_txdata(uint8_t *Buf, uint32_t size);
+  // extern void vcp_txdata(void);
+  extern void vcp_rxdata(uint8_t *Buf, uint32_t Len);
+  extern rt_ssize_t rt_usbd_write(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size);
+  rt_ssize_t rt_usbd_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size);
+  rt_ssize_t rt_usbd_write(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size);
+  /**
+   * @}
+   */
 
-/**
- * @}
- */
-
-/**
- * @}
- */
+  /**
+   * @}
+   */
 
 #ifdef __cplusplus
 }

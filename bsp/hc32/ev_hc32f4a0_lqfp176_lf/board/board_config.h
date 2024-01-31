@@ -27,14 +27,6 @@
 //     #define USART1_TX_PIN                   (GPIO_PIN_15)
 // #endif
 
-// #if defined(BSP_USING_UART2)
-//     #define USART2_RX_PORT                  (GPIO_PORT_B)
-//     #define USART2_RX_PIN                   (GPIO_PIN_09)
-
-//     #define USART2_TX_PORT                  (GPIO_PORT_E)
-//     #define USART2_TX_PIN                   (GPIO_PIN_00)
-// #endif
-
 // #if defined(BSP_USING_UART6)
 //     #define USART6_RX_PORT                  (GPIO_PORT_H)
 //     #define USART6_RX_PIN                   (GPIO_PIN_06)

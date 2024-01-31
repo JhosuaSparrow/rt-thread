@@ -1,20 +1,17 @@
 /*
-* @Author: Jack Sun
-* @Date:   2024-01-08 14:07:06
-* @Last Modified by:   JhosuaSparrow
-* @Last Modified time: 2024-01-22 17:31:40
-*/
+ * @Author: Jack Sun
+ * @Date:   2024-01-08 14:07:06
+ * @Last Modified by:   JhosuaSparrow
+ * @Last Modified time: 2024-01-22 17:31:40
+ */
 
 #include "button.h"
 #include "led.h"
 #include "atcmd.h"
-// #include "usb_cdc.h"
-
+#include "cdc_data_process.h"
 
 int main(void)
 {
-    // usb_cdc_init();
-
     // Init reset button
     reset_button_init();
 
@@ -32,7 +29,7 @@ int main(void)
     }
     atcmd_client_init();
 
-    // Server using UART2
+    // Server using CDC1
     atcmd_server_send_vbat_running();
 
     return 0;

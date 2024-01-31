@@ -20,13 +20,17 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
+#include <rtdef.h>
 #include "usb_dev_user.h"
 #include "usb_dev_desc.h"
 #include "usb_dev_cdc_class.h"
+#include "cdc_data_process.h"
 
 #endif /* __MAIN_H__ */
 
 void usb_cdc_init(void);
+
+rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_uint16_t flags);
 /*******************************************************************************
  * EOF (not truncated)
  ******************************************************************************/

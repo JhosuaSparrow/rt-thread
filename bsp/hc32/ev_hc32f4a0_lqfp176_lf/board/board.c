@@ -28,6 +28,9 @@
                                          LL_PERIPH_PWC_CLK_RMU | LL_PERIPH_SRAM)
 #define EXAMPLE_PERIPH_WP               (LL_PERIPH_EFM | LL_PERIPH_FCG | LL_PERIPH_SRAM)
 
+extern rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_uint16_t flags);
+extern struct rt_device rt_usb_dev;
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @param  None
@@ -183,6 +186,8 @@ void rt_hw_board_init()
 #ifdef RT_USING_COMPONENTS_INIT
     rt_components_board_init();
 #endif
+
+    rt_hc32_cdc_register(&rt_usb_dev, "cdc1", RT_DEVICE_FLAG_RDWR);
 }
 
 void rt_hw_us_delay(rt_uint32_t us)

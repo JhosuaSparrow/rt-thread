@@ -38,15 +38,15 @@
 /*******************************************************************************
  * Local pre-processor symbols/macros ('#define')
  ******************************************************************************/
-#define DEV_VID                        (0x2E88)
-#define DEV_PID                        (0x4603)
+#define DEV_VID (0x2E88)
+#define DEV_PID (0x4603)
 
-#define DEV_LANGID_STRING              (0x409)
-#define DEV_MANUFACTURER_STRING        ("XHSC")
-#define DEV_PRODUCT_FS_STRING          ("Device of CDC")
-#define DEV_SERIALNUMBER_FS_STRING     ("00000000050C")
-#define DEV_CONFIGURATION_FS_STRING    ("CDC Config")
-#define DEV_INTERFACE_FS_STRING        ("CDC Interface")
+#define DEV_LANGID_STRING (0x409)
+#define DEV_MANUFACTURER_STRING ("XHSC")
+#define DEV_PRODUCT_FS_STRING ("Device of CDC")
+#define DEV_SERIALNUMBER_FS_STRING ("00000000050C")
+#define DEV_CONFIGURATION_FS_STRING ("CDC Config")
+#define DEV_INTERFACE_FS_STRING ("CDC Interface")
 
 /*******************************************************************************
  * Local variable definitions ('static')
@@ -82,21 +82,21 @@ __USB_ALIGN_BEGIN static uint8_t usb_dev_devicedesc[USB_SIZ_DEVICE_DESC] = {
     USB_DEVICE_DESCRIPTOR_TYPE, /* bDescriptorType */
     0x00,                       /* bcdUSB */
     0x02,
-    0x00,                       /* bDeviceClass */
-    0x00,                       /* bDeviceSubClass */
-    0x00,                       /* bDeviceProtocol */
-    USB_MAX_EP0_SIZE,           /* bMaxPacketSize */
-    LOBYTE(DEV_VID),            /* idVendor */
-    HIBYTE(DEV_VID),            /* idVendor */
-    LOBYTE(DEV_PID),            /* idVendor */
-    HIBYTE(DEV_PID),            /* idVendor */
-    0x00,                       /* bcdDevice rel. 2.00 */
+    0x00,             /* bDeviceClass */
+    0x00,             /* bDeviceSubClass */
+    0x00,             /* bDeviceProtocol */
+    USB_MAX_EP0_SIZE, /* bMaxPacketSize */
+    LOBYTE(DEV_VID),  /* idVendor */
+    HIBYTE(DEV_VID),  /* idVendor */
+    LOBYTE(DEV_PID),  /* idVendor */
+    HIBYTE(DEV_PID),  /* idVendor */
+    0x00,             /* bcdDevice rel. 2.00 */
     0x02,
-    MFC_STR_IDX,                /* Index of manufacturer string */
-    PRODUCT_STR_IDX,            /* Index of product string */
-    SERIAL_STR_IDX,             /* Index of serial number string */
-    DEV_MAX_CFG_NUM             /* bNumConfigurations */
-} ;
+    MFC_STR_IDX,     /* Index of manufacturer string */
+    PRODUCT_STR_IDX, /* Index of product string */
+    SERIAL_STR_IDX,  /* Index of serial number string */
+    DEV_MAX_CFG_NUM  /* bNumConfigurations */
+};
 
 /* USB Standard Device Descriptor */
 __USB_ALIGN_BEGIN static uint8_t USB_DEV_LangIDDesc[USB_SIZ_STRING_LANGID] = {

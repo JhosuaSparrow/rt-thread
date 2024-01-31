@@ -129,14 +129,12 @@
 
 #define RT_USING_AT
 #define AT_USING_SERVER
-#define AT_SERVER_DEVICE "uart2"
+#define AT_SERVER_DEVICE "cdc1"
 #define AT_SERVER_RECV_BUFF_LEN 256
 #define AT_SERVER_SEND_BUFF_LEN 256
 #define AT_CMD_END_MARK_CRLF
 #define AT_USING_CLIENT
 #define AT_CLIENT_NUM_MAX 10
-#define AT_USING_CLI
-#define AT_PRINT_RAW_CMD
 #define AT_SW_VERSION_NUM 0x10301
 
 /* Memory protection */

@@ -1,9 +1,9 @@
 /*
-* @Author: Jack Sun
-* @Date:   2024-01-16 14:36:02
-* @Last Modified by:   JhosuaSparrow
-* @Last Modified time: 2024-01-22 15:16:00
-*/
+ * @Author: Jack Sun
+ * @Date:   2024-01-16 14:36:02
+ * @Last Modified by:   JhosuaSparrow
+ * @Last Modified time: 2024-01-22 15:16:00
+ */
 
 #include <rtthread.h>
 #include <rtdevice.h>
@@ -11,14 +11,13 @@
 #include "button.h"
 #include "atcmd.h"
 
-#define LOG_TAG             "lf.button"
+#define LOG_TAG "lf.button"
 #include <lf_log.h>
 
-#define RESET_BUTTON_PIN          GET_PIN(D, 10)
+#define RESET_BUTTON_PIN GET_PIN(D, 10)
 
 static rt_sem_t btnrst_sem;
 static rt_uint8_t reset_running = 0;
-
 
 void button_event_thread(void *args)
 {
@@ -39,15 +38,15 @@ void button_event_thread(void *args)
     }
 }
 
-
 void irq_callback(void *args)
 {
     LOG_D("enter gpio irq.");
-    if(rt_pin_read(RESET_BUTTON_PIN) == 0)
+    if (rt_pin_read(RESET_BUTTON_PIN) == 0)
     {
         rt_pin_irq_enable(RESET_BUTTON_PIN, PIN_IRQ_DISABLE);
         rt_hw_ms_delay(20);
-        if(rt_pin_read(RESET_BUTTON_PIN) == 0) {
+        if (rt_pin_read(RESET_BUTTON_PIN) == 0)
+        {
             LOG_D("button down irq.");
             if (reset_running == 0)
             {
@@ -72,7 +71,6 @@ void irq_callback(void *args)
     }
 }
 
-
 rt_err_t button_event_running(void)
 {
     rt_thread_t tid;
@@ -90,7 +88,6 @@ rt_err_t button_event_running(void)
 
     return ret;
 }
-
 
 void reset_button_init(void)
 {

@@ -1,18 +1,18 @@
 /*
-* @Author: Jack Sun
-* @Date:   2024-01-08 14:07:06
-* @Last Modified by:   JhosuaSparrow
-* @Last Modified time: 2024-01-22 17:27:44
-*/
+ * @Author: Jack Sun
+ * @Date:   2024-01-08 14:07:06
+ * @Last Modified by:   JhosuaSparrow
+ * @Last Modified time: 2024-01-22 17:27:44
+ */
 #include <rtthread.h>
 #include <rtdevice.h>
 #include <board.h>
 #include "led.h"
 
-#define LOG_TAG             "lf.led"
+#define LOG_TAG "lf.led"
 #include <lf_log.h>
 
-#define LED_DELAY_MS        500
+#define LED_DELAY_MS 500
 
 rt_uint16_t led_enable = 0;
 
@@ -26,9 +26,7 @@ static rt_base_t led_pins[] = {
     GET_PIN(D, 14),
     GET_PIN(D, 13),
     GET_PIN(D, 12),
-    GET_PIN(D, 11)
-};
-
+    GET_PIN(D, 11)};
 
 rt_uint16_t get_led_enable(rt_uint16_t led_no)
 {
@@ -36,7 +34,6 @@ rt_uint16_t get_led_enable(rt_uint16_t led_no)
     _enable_ = led_enable & (1 << (led_no - 1));
     return _enable_;
 }
-
 
 rt_err_t set_led_enable(rt_uint16_t led_no, rt_uint16_t enable)
 {
@@ -53,35 +50,30 @@ rt_err_t set_led_enable(rt_uint16_t led_no, rt_uint16_t enable)
     return RT_EOK;
 }
 
-
 void led_init(void)
 {
 
-    for (int i=0; i<10; i++)
+    for (int i = 0; i < 10; i++)
     {
         rt_pin_mode(led_pins[i], PIN_MODE_OUTPUT);
         led_off(i);
     }
 }
 
-
 void led_on(rt_uint8_t led_id)
 {
     rt_pin_write(led_pins[led_id], PIN_LOW);
 }
-
 
 void led_off(rt_uint8_t led_id)
 {
     rt_pin_write(led_pins[led_id], PIN_HIGH);
 }
 
-
 void led_toggle(rt_uint8_t led_id)
 {
     rt_pin_write(led_pins[led_id], !rt_pin_read(led_pins[led_id]));
 }
-
 
 rt_uint8_t led_state(rt_uint8_t led_id)
 {
@@ -89,12 +81,11 @@ rt_uint8_t led_state(rt_uint8_t led_id)
     return res;
 }
 
-
 void led_show_thread(void *args)
 {
     while (1)
     {
-        for(int i=0; i<10; i++)
+        for (int i = 0; i < 10; i++)
         {
             if (get_led_enable(i + 1) != 0)
             {
