@@ -44,7 +44,7 @@
  ******************************************************************************/
 
 usb_core_instance usb_dev;
-struct rt_device rt_usb_dev = {0};
+struct rt_device rt_usb_dev[CDC_NUM] = { 0 };
 
 // static rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_uint16_t flags);
 
@@ -53,8 +53,7 @@ struct rt_device rt_usb_dev = {0};
  * @param  None
  * @retval None
  */
-void usb_cdc_init(void)
-{
+void usb_cdc_init(void) {
     stc_usb_port_identify stcPortIdentify;
 #if defined(USB_FS_MODE)
     stcPortIdentify.u8CoreID = USBFS_CORE_ID;
@@ -69,8 +68,7 @@ void usb_cdc_init(void)
     usb_dev_init(&usb_dev, &stcPortIdentify, &user_desc, &class_cdc_cbk, &user_cb);
 }
 
-rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_uint16_t flags)
-{
+rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_size_t dev_id, rt_uint16_t flags) {
     rt_err_t ret;
 
     rt_usb_dev->type = RT_Device_Class_Char;
@@ -80,8 +78,17 @@ rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_uint1
     rt_usb_dev->init = RT_NULL;
     rt_usb_dev->open = RT_NULL;
     rt_usb_dev->close = RT_NULL;
-    rt_usb_dev->read = rt_usbd_read;
-    rt_usb_dev->write = rt_usbd_write;
+    if (dev_id == 0) {
+        rt_usb_dev->read = rt_usbd_cdc0_read;
+        rt_usb_dev->write = rt_usbd_cdc0_write;
+    }
+    else if (dev_id == 1) {
+        rt_usb_dev->read = rt_usbd_cdc1_read;
+        rt_usb_dev->write = rt_usbd_cdc1_write;
+    }
+    else {
+        return RT_FALSE;
+    }
     rt_usb_dev->control = RT_NULL;
 
     /* register a character device */
@@ -89,6 +96,16 @@ rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_uint1
     LOG_D("rt_device_register %s ret %d", name, ret);
 
     return ret;
+}
+
+void rt_hc32_cdcs_register(void) {
+    for (rt_size_t i = 0; i < CDC_NUM; i++) {
+        char cdcd_name[4] = "cdc0";
+        if (i == 1) {
+            cdcd_name[3] = '1';
+        }
+        rt_hc32_cdc_register(&rt_usb_dev[i], cdcd_name, i, RT_DEVICE_FLAG_RDWR);
+    }
 }
 
 /**

@@ -81,34 +81,34 @@ extern "C"
 #define SEND_BREAK                              (0x23U)
 #define NO_CMD                                  (0xFFU)
 
-extern uint8_t uart_rx_buffer[APP_RX_DATA_SIZE];
-extern uint32_t APP_Rx_ptr_in;
-extern uint32_t APP_Rx_ptr_out;
-/*******************************************************************************
- * Global variable definitions ('extern')
- ******************************************************************************/
-extern usb_dev_class_func  class_cdc_cbk;
+  extern uint8_t uart_rx_buffer[APP_RX_DATA_SIZE];
+  extern uint32_t APP_Rx_ptr_in;
+  extern uint32_t APP_Rx_ptr_out;
+  /*******************************************************************************
+   * Global variable definitions ('extern')
+   ******************************************************************************/
+  extern usb_dev_class_func  class_cdc_cbk;
 
-/* CDC Device library callbacks */
-extern void usb_dev_cdc_init(void *pdev);;
-extern void usb_dev_cdc_deinit(void *pdev);
-extern uint8_t usb_dev_cdc_setup(void *pdev, USB_SETUP_REQ *req);
-extern void usb_dev_cdc_datain(void *pdev, uint8_t epnum);
-extern void usb_dev_cdc_dataout(void *pdev, uint8_t epnum);
-extern void usb_dev_cdc_ctrlep_rxready(void *pdev);
-extern uint8_t usb_dev_cdc_sof(void *pdev);
+  /* CDC Device library callbacks */
+  extern void usb_dev_cdc_init(void *pdev);;
+  extern void usb_dev_cdc_deinit(void *pdev);
+  extern uint8_t usb_dev_cdc_setup(void *pdev, USB_SETUP_REQ *req);
+  extern void usb_dev_cdc_datain(void *pdev, uint8_t epnum);
+  extern void usb_dev_cdc_dataout(void *pdev, uint8_t epnum);
+  extern void usb_dev_cdc_ctrlep_rxready(void *pdev);
+  extern uint8_t usb_dev_cdc_sof(void *pdev);
 
-/**
- * @}
- */
+  /**
+   * @}
+   */
 
-/**
- * @}
- */
+  /**
+   * @}
+   */
 
-/**
- * @}
- */
+  /**
+   * @}
+   */
 
 #ifdef __cplusplus
 }

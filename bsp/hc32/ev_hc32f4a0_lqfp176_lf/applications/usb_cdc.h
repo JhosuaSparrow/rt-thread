@@ -29,8 +29,8 @@
 #endif /* __MAIN_H__ */
 
 void usb_cdc_init(void);
-
-rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_uint16_t flags);
+rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_size_t dev_id, rt_uint16_t flags);
+void rt_hc32_cdcs_register(void);
 /*******************************************************************************
  * EOF (not truncated)
  ******************************************************************************/

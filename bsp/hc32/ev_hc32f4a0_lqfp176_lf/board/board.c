@@ -28,28 +28,24 @@
                                          LL_PERIPH_PWC_CLK_RMU | LL_PERIPH_SRAM)
 #define EXAMPLE_PERIPH_WP               (LL_PERIPH_EFM | LL_PERIPH_FCG | LL_PERIPH_SRAM)
 
-extern rt_err_t rt_hc32_cdc_register(rt_device_t rt_usb_dev, const char *name, rt_uint16_t flags);
-extern struct rt_device rt_usb_dev;
+extern void rt_hc32_cdcs_register(void);
 
 /**
   * @brief  This function is executed in case of error occurrence.
   * @param  None
   * @retval None
   */
-void Error_Handler(void)
-{
+void Error_Handler(void) {
     /* USER CODE BEGIN Error_Handler */
     /* User can add his own implementation to report the HAL error return state */
-    while (1)
-    {
+    while (1) {
     }
     /* USER CODE END Error_Handler */
 }
 
 /** System Clock Configuration
 */
-void SystemClock_Config(void)
-{
+void SystemClock_Config(void) {
     stc_clock_xtal_init_t stcXtalInit;
     stc_clock_pll_init_t stcPLLHInit;
 
@@ -58,15 +54,15 @@ void SystemClock_Config(void)
     /* PCLK2, PCLK3 Max 60MHz  */
     /* EX BUS Max 120MHz */
     CLK_SetClockDiv(CLK_BUS_CLK_ALL, \
-                    (CLK_PCLK0_DIV1 | CLK_PCLK1_DIV2 | CLK_PCLK2_DIV4 | \
-                     CLK_PCLK3_DIV4 | CLK_PCLK4_DIV2 | CLK_EXCLK_DIV2 | \
-                     CLK_HCLK_DIV1));
+        (CLK_PCLK0_DIV1 | CLK_PCLK1_DIV2 | CLK_PCLK2_DIV4 | \
+            CLK_PCLK3_DIV4 | CLK_PCLK4_DIV2 | CLK_EXCLK_DIV2 | \
+            CLK_HCLK_DIV1));
 
     (void)CLK_XtalStructInit(&stcXtalInit);
     /* Config Xtal and enable Xtal */
-    stcXtalInit.u8Mode   = CLK_XTAL_MD_OSC;
-    stcXtalInit.u8Drv    = CLK_XTAL_DRV_ULOW;
-    stcXtalInit.u8State  = CLK_XTAL_ON;
+    stcXtalInit.u8Mode = CLK_XTAL_MD_OSC;
+    stcXtalInit.u8Drv = CLK_XTAL_DRV_ULOW;
+    stcXtalInit.u8State = CLK_XTAL_ON;
     stcXtalInit.u8StableTime = CLK_XTAL_STB_2MS;
     (void)CLK_XtalInit(&stcXtalInit);
 
@@ -100,8 +96,7 @@ void SystemClock_Config(void)
 
 /** Peripheral Clock Configuration
 */
-static void PeripheralClock_Config(void)
-{
+static void PeripheralClock_Config(void) {
 #if defined(HC32F4A0)
 #if defined(BSP_USING_CAN1)
     CLK_SetCANClockSrc(CLK_CAN1, CLK_CANCLK_SYSCLK_DIV6);
@@ -123,8 +118,7 @@ static void PeripheralClock_Config(void)
  * Output         : None
  * Return         : None
  *******************************************************************************/
-void  SysTick_Configuration(void)
-{
+void  SysTick_Configuration(void) {
     stc_clock_freq_t stcClkFreq;
     rt_uint32_t cnts;
 
@@ -139,8 +133,7 @@ void  SysTick_Configuration(void)
  * This is the timer interrupt service routine.
  *
  */
-void SysTick_Handler(void)
-{
+void SysTick_Handler(void) {
     /* enter interrupt */
     rt_interrupt_enter();
 
@@ -153,8 +146,7 @@ void SysTick_Handler(void)
 /**
  * This function will initial HC32 board.
  */
-void rt_hw_board_init()
-{
+void rt_hw_board_init() {
     /* Peripheral registers write unprotected */
     LL_PERIPH_WE(EXAMPLE_PERIPH_WE);
 
@@ -187,28 +179,24 @@ void rt_hw_board_init()
     rt_components_board_init();
 #endif
 
-    rt_hc32_cdc_register(&rt_usb_dev, "cdc1", RT_DEVICE_FLAG_RDWR);
+    rt_hc32_cdcs_register();
 }
 
-void rt_hw_us_delay(rt_uint32_t us)
-{
+void rt_hw_us_delay(rt_uint32_t us) {
     uint32_t start, now, delta, reload, us_tick;
     start = SysTick->VAL;
     reload = SysTick->LOAD;
     us_tick = SystemCoreClock / 1000000UL;
 
-    do
-    {
+    do {
         now = SysTick->VAL;
-        delta = start > now ?  start - now : reload + start - now;
-    }
-    while (delta < us_tick * us);
+        delta = start > now ? start - now : reload + start - now;
+    } while (delta < us_tick * us);
 }
 
-void rt_hw_ms_delay(rt_uint32_t ms)
-{
-    for(int i = 0; i < ms; i++) {
-        for(int j = 0; j < 10; j++) {
+void rt_hw_ms_delay(rt_uint32_t ms) {
+    for (int i = 0; i < ms; i++) {
+        for (int j = 0; j < 10; j++) {
             rt_hw_us_delay(100);
         }
     }
