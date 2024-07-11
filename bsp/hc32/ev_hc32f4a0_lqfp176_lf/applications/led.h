@@ -5,7 +5,12 @@
  * @Last Modified time: 2024-01-12 11:32:15
  */
 
-#include <rtdef.h>
+#include "rtthread.h"
+#include "rtdevice.h"
+#include "board.h"
+#include "drv_gpio.h"
+
+#define LED_DELAY_MS 500
 
 rt_uint16_t get_led_enable(rt_uint16_t led_no);
 rt_err_t set_led_enable(rt_uint16_t led_no, rt_uint16_t enable);

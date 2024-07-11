@@ -116,8 +116,7 @@ __USB_ALIGN_BEGIN static uint8_t usb_dev_strdesc[USB_MAX_STR_DESC_SIZ];
  * @param  [in] length      pointer to data length variable
  * @retval pointer to descriptor buffer
  */
-uint8_t *usb_dev_desc(uint16_t *length)
-{
+uint8_t *usb_dev_desc(uint16_t *length) {
     *length = (uint16_t)sizeof(usb_dev_devicedesc);
     return usb_dev_devicedesc;
 }
@@ -127,8 +126,7 @@ uint8_t *usb_dev_desc(uint16_t *length)
  * @param  [in] length      pointer to data length variable
  * @retval pointer to descriptor buffer
  */
-uint8_t *usb_dev_langiddesc(uint16_t *length)
-{
+uint8_t *usb_dev_langiddesc(uint16_t *length) {
     *length = (uint16_t)sizeof(USB_DEV_LangIDDesc);
     return USB_DEV_LangIDDesc;
 }
@@ -138,8 +136,7 @@ uint8_t *usb_dev_langiddesc(uint16_t *length)
  * @param  [in] length      pointer to data length variable
  * @retval pointer to descriptor buffer
  */
-uint8_t *usb_dev_productdesc(uint16_t *length)
-{
+uint8_t *usb_dev_productdesc(uint16_t *length) {
     usb_getstring((uint8_t *)DEV_PRODUCT_FS_STRING, usb_dev_strdesc, length);
     return usb_dev_strdesc;
 }
@@ -149,8 +146,7 @@ uint8_t *usb_dev_productdesc(uint16_t *length)
  * @param  [in] length      pointer to data length variable
  * @retval pointer to descriptor buffer
  */
-uint8_t *usb_dev_manufacturerstr(uint16_t *length)
-{
+uint8_t *usb_dev_manufacturerstr(uint16_t *length) {
     usb_getstring((uint8_t *)DEV_MANUFACTURER_STRING, usb_dev_strdesc, length);
     return usb_dev_strdesc;
 }
@@ -160,8 +156,7 @@ uint8_t *usb_dev_manufacturerstr(uint16_t *length)
  * @param  [in] length      pointer to data length variable
  * @retval pointer to descriptor buffer
  */
-uint8_t *usb_dev_serialstr(uint16_t *length)
-{
+uint8_t *usb_dev_serialstr(uint16_t *length) {
     usb_getstring((uint8_t *)DEV_SERIALNUMBER_FS_STRING, usb_dev_strdesc, length);
     return usb_dev_strdesc;
 }
@@ -171,8 +166,7 @@ uint8_t *usb_dev_serialstr(uint16_t *length)
  * @param  [in] length      pointer to data length variable
  * @retval pointer to descriptor buffer
  */
-uint8_t *usb_dev_configstrdesc(uint16_t *length)
-{
+uint8_t *usb_dev_configstrdesc(uint16_t *length) {
     usb_getstring((uint8_t *)DEV_CONFIGURATION_FS_STRING, usb_dev_strdesc, length);
     return usb_dev_strdesc;
 }
@@ -182,8 +176,7 @@ uint8_t *usb_dev_configstrdesc(uint16_t *length)
  * @param  [in] length      pointer to data length variable
  * @retval pointer to descriptor buffer
  */
-uint8_t *usb_dev_intfstrdesc(uint16_t *length)
-{
+uint8_t *usb_dev_intfstrdesc(uint16_t *length) {
     usb_getstring((uint8_t *)DEV_INTERFACE_FS_STRING, usb_dev_strdesc, length);
     return usb_dev_strdesc;
 }

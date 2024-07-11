@@ -135,6 +135,7 @@
 #define AT_CMD_END_MARK_CRLF
 #define AT_USING_CLIENT
 #define AT_CLIENT_NUM_MAX 10
+#define AT_USING_CLI
 #define AT_SW_VERSION_NUM 0x10301
 
 /* Memory protection */
@@ -142,19 +143,6 @@
 
 /* Utilities */
 
-#define RT_USING_ULOG
-#define ULOG_OUTPUT_LVL_D
-#define ULOG_OUTPUT_LVL 7
-#define ULOG_ASSERT_ENABLE
-#define ULOG_LINE_BUF_SIZE 128
-
-/* log format */
-
-#define ULOG_USING_COLOR
-#define ULOG_OUTPUT_TIME
-#define ULOG_OUTPUT_LEVEL
-#define ULOG_OUTPUT_TAG
-#define ULOG_BACKEND_USING_CONSOLE
 
 /* RT-Thread Utestcases */
 
@@ -222,13 +210,18 @@
 
 /* peripheral libraries and drivers */
 
+/* HAL & SDK Drivers */
+
+/* STM32 HAL & SDK Drivers */
+
+
+/* Kendryte SDK */
+
+
 /* sensors drivers */
 
 
 /* touch drivers */
-
-
-/* Kendryte SDK */
 
 
 /* AI packages */

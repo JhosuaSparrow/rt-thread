@@ -191,6 +191,16 @@ extern "C"
  */
 #define RE_DEFINE_MAIN                              (0)
 
+/* Boot configuration */
+#define IAP_BOOT_SIZE                               (0x20000UL)
+/* APP configuration */
+#define APP_EXIST_FLAG_ADDR                         (EFM_BASE + IAP_BOOT_SIZE - 4U)
+#define APP_UPGRADE_FLAG_ADDR                       (EFM_BASE + IAP_BOOT_SIZE - 8U)
+#define APP_RUN_ADDR                                (EFM_BASE + IAP_BOOT_SIZE - 12U)
+
+/* Vector table */
+#define VECT_TAB_OFFSET                             (EFM_BASE + IAP_BOOT_SIZE)
+
 /*******************************************************************************
  * Global variable definitions ('extern')
  ******************************************************************************/

@@ -71,8 +71,8 @@ void SystemClock_Config(void) {
     stcPLLHInit.u8PLLState = CLK_PLL_ON;
     stcPLLHInit.PLLCFGR = 0UL;
     stcPLLHInit.PLLCFGR_f.PLLM = 1UL - 1UL;
-    // stcPLLHInit.PLLCFGR_f.PLLN = 60UL - 1UL;
-    stcPLLHInit.PLLCFGR_f.PLLN = 120UL - 1UL;
+    stcPLLHInit.PLLCFGR_f.PLLN = 60UL - 1UL;
+    // stcPLLHInit.PLLCFGR_f.PLLN = 120UL - 1UL;
     stcPLLHInit.PLLCFGR_f.PLLP = 4UL - 1UL;
     stcPLLHInit.PLLCFGR_f.PLLQ = 4UL - 1UL;
     stcPLLHInit.PLLCFGR_f.PLLR = 4UL - 1UL;

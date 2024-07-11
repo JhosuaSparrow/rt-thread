@@ -52,8 +52,8 @@
 /**
  * @brief ICG Start Address
  */
-#define ICG_START_ADDR                  0x400
-#define ICG_START_ADDR_AC6              ".ARM.__at_0x400"
+#define ICG_START_ADDR                  VECT_TAB_OFFSET + 0x400
+#define ICG_START_ADDR_AC6              ".ARM.__at_0x20400"
 
 /**
  * @}

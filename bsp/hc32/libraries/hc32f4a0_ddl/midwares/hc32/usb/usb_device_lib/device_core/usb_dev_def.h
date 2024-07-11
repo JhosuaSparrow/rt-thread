@@ -72,10 +72,18 @@ extern "C"
 #define INTERFACE_STR_IDX                               (0x05U)
 
 /* Request type */
+#ifndef USB_REQ_TYPE_STANDARD
 #define USB_REQ_TYPE_STANDARD                           (0x00U)
+#endif
+#ifndef USB_REQ_TYPE_CLASS
 #define USB_REQ_TYPE_CLASS                              (0x20U)
+#endif
+#ifndef USB_REQ_TYPE_VENDOR
 #define USB_REQ_TYPE_VENDOR                             (0x40U)
+#endif
+#ifndef USB_REQ_TYPE_MASK
 #define USB_REQ_TYPE_MASK                               (0x60U)
+#endif
 
 /* Request recipient */
 #define USB_REQ_RECIPIENT_DEVICE                        (0x00U)
@@ -84,24 +92,56 @@ extern "C"
 #define USB_REQ_RECIPIENT_MASK                          (0x03U)
 
 /* Standart request type */
+#ifndef USB_REQ_GET_STATUS
 #define USB_REQ_GET_STATUS                              (0x00U)
+#endif
+#ifndef USB_REQ_CLEAR_FEATURE
 #define USB_REQ_CLEAR_FEATURE                           (0x01U)
+#endif
+#ifndef USB_REQ_SET_FEATURE
 #define USB_REQ_SET_FEATURE                             (0x03U)
+#endif
+#ifndef USB_REQ_SET_ADDRESS
 #define USB_REQ_SET_ADDRESS                             (0x05U)
+#endif
+#ifndef USB_REQ_GET_DESCRIPTOR
 #define USB_REQ_GET_DESCRIPTOR                          (0x06U)
+#endif
+#ifndef USB_REQ_SET_DESCRIPTOR
 #define USB_REQ_SET_DESCRIPTOR                          (0x07U)
+#endif
+#ifndef USB_REQ_GET_CONFIGURATION
 #define USB_REQ_GET_CONFIGURATION                       (0x08U)
+#endif
+#ifndef USB_REQ_SET_CONFIGURATION
 #define USB_REQ_SET_CONFIGURATION                       (0x09U)
+#endif
+#ifndef USB_REQ_GET_INTERFACE
 #define USB_REQ_GET_INTERFACE                           (0x0AU)
+#endif
+#ifndef USB_REQ_SET_INTERFACE
 #define USB_REQ_SET_INTERFACE                           (0x0BU)
+#endif
+#ifndef USB_REQ_SYNCH_FRAME
 #define USB_REQ_SYNCH_FRAME                             (0x0CU)
+#endif
 
 /* Descriptor type */
+#ifndef USB_DESC_TYPE_DEVICE
 #define USB_DESC_TYPE_DEVICE                            (1U)
+#endif
+#ifndef USB_DESC_TYPE_CONFIGURATION
 #define USB_DESC_TYPE_CONFIGURATION                     (2U)
+#endif
+#ifndef USB_DESC_TYPE_STRING
 #define USB_DESC_TYPE_STRING                            (3U)
+#endif
+#ifndef USB_DESC_TYPE_INTERFACE
 #define USB_DESC_TYPE_INTERFACE                         (4U)
+#endif
+#ifndef USB_DESC_TYPE_ENDPOINT
 #define USB_DESC_TYPE_ENDPOINT                          (5U)
+#endif
 #define USB_DESC_TYPE_DEVICE_QUALIFIER                  (6U)
 #define USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION         (7U)
 
@@ -112,7 +152,9 @@ extern "C"
 /* USB device feature */
 #define USB_FEATURE_EP_HALT                             (0U)
 #define USB_FEATURE_REMOTE_WAKEUP                       (1U)
+#ifndef USB_FEATURE_TEST_MODE
 #define USB_FEATURE_TEST_MODE                           (2U)
+#endif
 
 /* USB device configuration status */
 #define USB_DEV_CONFIG_CLEAR                            (0U)
