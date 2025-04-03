@@ -8,15 +8,16 @@
  * 2021-09.01     luckyzjq     the first version
  * 2023-09-15     xqyjlj       change stack size in cpu64
  */
+#define __RT_IPC_SOURCE__
 
 #include <rtthread.h>
 #include <stdlib.h>
 #include "utest.h"
 
 #ifdef ARCH_CPU_64BIT
-#define THREAD_STACKSIZE 4096
+#define THREAD_STACKSIZE 8192
 #else
-#define THREAD_STACKSIZE 1024
+#define THREAD_STACKSIZE 4096
 #endif
 
 static struct rt_mutex static_mutex;
@@ -24,6 +25,8 @@ static struct rt_mutex static_mutex;
 #ifdef RT_USING_HEAP
 static rt_mutex_t dynamic_mutex;
 #endif /* RT_USING_HEAP */
+
+static volatile int _sync_flag;
 
 /* init test */
 static void test_static_mutex_init(void)
@@ -71,10 +74,14 @@ static void static_mutex_take_entry(void *param)
     {
         uassert_true(RT_FALSE);
     }
+    _sync_flag++;
 }
+
 static void test_static_mutex_take(void)
 {
     rt_err_t result;
+
+    _sync_flag = 0;
 
     result = rt_mutex_init(&static_mutex, "static_mutex", RT_IPC_FLAG_PRIO);
     if (RT_EOK != result)
@@ -103,8 +110,10 @@ static void test_static_mutex_take(void)
     /* startup thread take second */
     rt_thread_startup(tid);
 
-    /* let system schedule */
-    rt_thread_mdelay(5);
+    while (_sync_flag != 1)
+    {
+        rt_thread_mdelay(10);
+    }
 
     result = rt_mutex_detach(&static_mutex);
     if (RT_EOK != result)
@@ -127,10 +136,13 @@ static void static_mutex_release_entry(void *param)
     {
         uassert_true(RT_FALSE);
     }
+    _sync_flag++;
 }
 static void test_static_mutex_release(void)
 {
     rt_err_t result;
+
+    _sync_flag = 0;
 
     result = rt_mutex_init(&static_mutex, "static_mutex", RT_IPC_FLAG_PRIO);
     if (RT_EOK != result)
@@ -138,6 +150,9 @@ static void test_static_mutex_release(void)
         uassert_true(RT_FALSE);
         return;
     }
+
+    result = rt_mutex_release(&static_mutex);
+    uassert_true(result < 0);
 
     /* take mutex */
     result = rt_mutex_take(&static_mutex, RT_WAITING_FOREVER);
@@ -164,8 +179,10 @@ static void test_static_mutex_release(void)
     /* startup thread and take mutex second */
     rt_thread_startup(tid);
 
-    /* let system schedule */
-    rt_thread_mdelay(5);
+    while (_sync_flag != 1)
+    {
+        rt_thread_mdelay(10);
+    }
 
     result = rt_mutex_detach(&static_mutex);
     if (RT_EOK != result)
@@ -187,10 +204,13 @@ static void static_mutex_trytake_entry(void *param)
     {
         uassert_true(RT_FALSE);
     }
+    _sync_flag++;
 }
 static void test_static_mutex_trytake(void)
 {
     rt_err_t result;
+
+    _sync_flag = 0;
 
     result = rt_mutex_init(&static_mutex, "static_mutex", RT_IPC_FLAG_PRIO);
     if (RT_EOK != result)
@@ -219,8 +239,10 @@ static void test_static_mutex_trytake(void)
     /* startup thread and trytake mutex second */
     rt_thread_startup(tid);
 
-    /* let system schedule */
-    rt_thread_mdelay(5);
+    while (_sync_flag != 1)
+    {
+        rt_thread_mdelay(10);
+    }
 
     result = rt_mutex_detach(&static_mutex);
     if (RT_EOK != result)
@@ -241,7 +263,7 @@ static void static_thread1_entry(void *param)
 
     /*  thread3 hode mutex  thread2 take mutex */
     /* check thread2 and thread3 priority */
-    if (tid2->current_priority != tid3->current_priority)
+    if (RT_SCHED_PRIV(tid2).current_priority != RT_SCHED_PRIV(tid3).current_priority)
     {
         uassert_true(RT_FALSE);
     }
@@ -249,6 +271,7 @@ static void static_thread1_entry(void *param)
     {
         uassert_true(RT_TRUE);
     }
+    _sync_flag++;
 }
 
 static void static_thread2_entry(void *param)
@@ -264,6 +287,7 @@ static void static_thread2_entry(void *param)
     {
         rt_mutex_release(mutex);
     }
+    _sync_flag++;
 }
 static void static_thread3_entry(void *param)
 {
@@ -281,6 +305,7 @@ static void static_thread3_entry(void *param)
     while (rt_tick_get() - tick < (RT_TICK_PER_SECOND / 2));
 
     rt_mutex_release(mutex);
+    _sync_flag++;
 }
 
 static void test_static_pri_reverse(void)
@@ -289,6 +314,8 @@ static void test_static_pri_reverse(void)
     tid1 = RT_NULL;
     tid2 = RT_NULL;
     tid3 = RT_NULL;
+
+    _sync_flag = 0;
 
     result = rt_mutex_init(&static_mutex, "static_mutex", RT_IPC_FLAG_PRIO);
     if (RT_EOK != result)
@@ -327,7 +354,10 @@ static void test_static_pri_reverse(void)
     if (tid3 != RT_NULL)
         rt_thread_startup(tid3);
 
-    rt_thread_mdelay(1000);
+    while (_sync_flag != 3)
+    {
+        rt_thread_mdelay(10);
+    }
 
     result = rt_mutex_detach(&static_mutex);
     if (RT_EOK != result)
@@ -384,10 +414,14 @@ static void dynamic_mutex_take_entry(void *param)
     {
         uassert_true(RT_FALSE);
     }
+    _sync_flag++;
 }
+
 static void test_dynamic_mutex_take(void)
 {
     rt_err_t result;
+
+    _sync_flag = 0;
 
     dynamic_mutex = rt_mutex_create("dynamic_mutex", RT_IPC_FLAG_PRIO);
     if (RT_NULL == dynamic_mutex)
@@ -416,8 +450,10 @@ static void test_dynamic_mutex_take(void)
     /* startup thread take second */
     rt_thread_startup(tid);
 
-    /* let system schedule */
-    rt_thread_mdelay(5);
+    while (_sync_flag != 1)
+    {
+        rt_thread_mdelay(10);
+    }
 
     result = rt_mutex_delete(dynamic_mutex);
     if (RT_EOK != result)
@@ -440,17 +476,22 @@ static void dynamic_mutex_release_entry(void *param)
     {
         uassert_true(RT_FALSE);
     }
+    _sync_flag++;
 }
 static void test_dynamic_mutex_release(void)
 {
     rt_err_t result;
 
+    _sync_flag = 0;
     dynamic_mutex = rt_mutex_create("dynamic_mutex", RT_IPC_FLAG_PRIO);
     if (RT_NULL == dynamic_mutex)
     {
         uassert_true(RT_FALSE);
         return;
     }
+
+    result = rt_mutex_release(dynamic_mutex);
+    uassert_true(result < 0);
 
     /* take mutex */
     result = rt_mutex_take(dynamic_mutex, RT_WAITING_FOREVER);
@@ -477,8 +518,10 @@ static void test_dynamic_mutex_release(void)
     /* startup thread and take mutex second */
     rt_thread_startup(tid);
 
-    /* let system schedule */
-    rt_thread_mdelay(5);
+    while (_sync_flag != 1)
+    {
+        rt_thread_mdelay(10);
+    }
 
     result = rt_mutex_delete(dynamic_mutex);
     if (RT_EOK != result)
@@ -500,11 +543,13 @@ static void dynamic_mutex_trytake_entry(void *param)
     {
         uassert_true(RT_FALSE);
     }
+    _sync_flag++;
 }
 static void test_dynamic_mutex_trytake(void)
 {
     rt_err_t result;
 
+    _sync_flag = 0;
     dynamic_mutex = rt_mutex_create("dynamic_mutex", RT_IPC_FLAG_PRIO);
     if (RT_NULL == dynamic_mutex)
     {
@@ -532,8 +577,10 @@ static void test_dynamic_mutex_trytake(void)
     /* startup thread and trytake mutex second */
     rt_thread_startup(tid);
 
-    /* let system schedule */
-    rt_thread_mdelay(5);
+    while (_sync_flag != 1)
+    {
+        rt_thread_mdelay(10);
+    }
 
     result = rt_mutex_delete(dynamic_mutex);
     if (RT_EOK != result)
@@ -550,7 +597,7 @@ static void dynamic_thread1_entry(void *param)
 
     /*  thread3 hode mutex  thread2 take mutex */
     /* check thread2 and thread3 priority */
-    if (tid2->current_priority != tid3->current_priority)
+    if (RT_SCHED_PRIV(tid2).current_priority != RT_SCHED_PRIV(tid3).current_priority)
     {
         uassert_true(RT_FALSE);
     }
@@ -558,6 +605,7 @@ static void dynamic_thread1_entry(void *param)
     {
         uassert_true(RT_TRUE);
     }
+    _sync_flag++;
 }
 
 static void dynamic_thread2_entry(void *param)
@@ -573,6 +621,7 @@ static void dynamic_thread2_entry(void *param)
     {
         rt_mutex_release(mutex);
     }
+    _sync_flag++;
 }
 static void dynamic_thread3_entry(void *param)
 {
@@ -590,6 +639,7 @@ static void dynamic_thread3_entry(void *param)
     while (rt_tick_get() - tick < (RT_TICK_PER_SECOND / 2));
 
     rt_mutex_release(mutex);
+    _sync_flag++;
 }
 
 static void test_dynamic_pri_reverse(void)
@@ -599,6 +649,7 @@ static void test_dynamic_pri_reverse(void)
     tid2 = RT_NULL;
     tid3 = RT_NULL;
 
+    _sync_flag = 0;
     dynamic_mutex = rt_mutex_create("dynamic_mutex", RT_IPC_FLAG_PRIO);
     if (RT_NULL == dynamic_mutex)
     {
@@ -636,13 +687,76 @@ static void test_dynamic_pri_reverse(void)
     if (tid3 != RT_NULL)
         rt_thread_startup(tid3);
 
-    rt_thread_mdelay(1000);
+    while (_sync_flag != 3)
+    {
+        rt_thread_mdelay(10);
+    }
 
     result = rt_mutex_delete(dynamic_mutex);
     if (RT_EOK != result)
         uassert_true(RT_FALSE);
 
     uassert_true(RT_TRUE);
+}
+
+static void recursive_lock_test_entry(void *param)
+{
+    rt_err_t result;
+    rt_mutex_t mutex = (rt_mutex_t)param;
+
+    result = rt_mutex_take(mutex, RT_WAITING_FOREVER);
+    uassert_true(result == RT_EOK);
+    uassert_true(_sync_flag == 0);
+    result = rt_mutex_take(mutex, RT_WAITING_FOREVER);
+    uassert_true(result == RT_EOK);
+    _sync_flag++;
+}
+
+static void test_recurse_lock(void)
+{
+    rt_err_t result;
+
+    _sync_flag = 0;
+    result = rt_mutex_init(&static_mutex, "static_mutex", RT_IPC_FLAG_PRIO);
+    uassert_true(result == RT_EOK);
+
+    /* take mutex and not release */
+    result = rt_mutex_take(&static_mutex, RT_WAITING_FOREVER);
+    uassert_true(result == RT_EOK);
+
+    /* take mutex twice */
+    result = rt_mutex_take(&static_mutex, RT_WAITING_FOREVER);
+    uassert_true(result == RT_EOK);
+
+    rt_thread_t tid = rt_thread_create("mutex_th",
+                                       recursive_lock_test_entry,
+                                       &static_mutex,
+                                       THREAD_STACKSIZE,
+                                       10,
+                                       10);
+    _sync_flag = -1;
+
+    if (tid != RT_NULL)
+        rt_thread_startup(tid);
+
+    result = rt_mutex_release(&static_mutex);
+    uassert_true(result == RT_EOK);
+
+    _sync_flag = 0;
+
+    result = rt_mutex_release(&static_mutex);
+    uassert_true(result == RT_EOK);
+
+    while (_sync_flag != 1)
+    {
+        rt_thread_mdelay(10);
+    }
+
+    result = rt_mutex_take(&static_mutex, RT_WAITING_FOREVER);
+    uassert_true(result == RT_EOK);
+
+    result = rt_mutex_detach(&static_mutex);
+    uassert_true(result == RT_EOK);
 }
 
 static rt_err_t utest_tc_init(void)
@@ -677,6 +791,7 @@ static void testcase(void)
     UTEST_UNIT_RUN(test_dynamic_mutex_trytake);
     UTEST_UNIT_RUN(test_dynamic_pri_reverse);
 #endif
+    UTEST_UNIT_RUN(test_recurse_lock);
 }
 UTEST_TC_EXPORT(testcase, "testcases.kernel.mutex_tc", utest_tc_init, utest_tc_cleanup, 1000);
 

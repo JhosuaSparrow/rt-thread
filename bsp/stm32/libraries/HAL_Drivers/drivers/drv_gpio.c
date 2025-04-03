@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2023, RT-Thread Development Team
+ * Copyright (c) 2006-2025, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -35,6 +35,14 @@
 #define PIN_STPIN(pin) ((uint16_t)(1u << PIN_NO(pin)))
 
 #if defined(GPIOZ)
+#define __STM32_PORT_MAX 16u
+#elif defined(GPIOP)
+#define __STM32_PORT_MAX 15u
+#elif defined(GPIOO)
+#define __STM32_PORT_MAX 14u
+#elif defined(GPION)
+#define __STM32_PORT_MAX 13u
+#elif defined(GPIOM)
 #define __STM32_PORT_MAX 12u
 #elif defined(GPIOK)
 #define __STM32_PORT_MAX 11u
@@ -84,7 +92,8 @@ static const struct pin_irq_map pin_irq_map[] =
         {GPIO_PIN_13, EXTI4_15_IRQn},
         {GPIO_PIN_14, EXTI4_15_IRQn},
         {GPIO_PIN_15, EXTI4_15_IRQn},
-#elif defined(SOC_SERIES_STM32MP1) || defined(SOC_SERIES_STM32L5) || defined(SOC_SERIES_STM32U5) || defined(SOC_SERIES_STM32H5)
+#elif defined(SOC_SERIES_STM32MP1) || defined(SOC_SERIES_STM32L5) || defined(SOC_SERIES_STM32U5) \
+                || defined(SOC_SERIES_STM32H5) || defined(SOC_SERIES_STM32H7RS)
         {GPIO_PIN_0, EXTI0_IRQn},
         {GPIO_PIN_1, EXTI1_IRQn},
         {GPIO_PIN_2, EXTI2_IRQn},
@@ -217,17 +226,21 @@ static void stm32_pin_write(rt_device_t dev, rt_base_t pin, rt_uint8_t value)
     }
 }
 
-static rt_int8_t stm32_pin_read(rt_device_t dev, rt_base_t pin)
+static rt_ssize_t stm32_pin_read(rt_device_t dev, rt_base_t pin)
 {
     GPIO_TypeDef *gpio_port;
     uint16_t gpio_pin;
-    GPIO_PinState state = PIN_LOW;
+    GPIO_PinState state = GPIO_PIN_RESET;
 
     if (PIN_PORT(pin) < PIN_STPORT_MAX)
     {
         gpio_port = PIN_STPORT(pin);
         gpio_pin = PIN_STPIN(pin);
         state = HAL_GPIO_ReadPin(gpio_port, gpio_pin);
+    }
+    else
+    {
+        return -RT_EINVAL;
     }
 
     return (state == GPIO_PIN_RESET) ? PIN_LOW : PIN_HIGH;
@@ -381,7 +394,6 @@ static rt_err_t stm32_pin_irq_enable(struct rt_device *device, rt_base_t pin,
     const struct pin_irq_map *irqmap;
     rt_base_t level;
     rt_int32_t irqindex = -1;
-    GPIO_InitTypeDef GPIO_InitStruct;
 
     if (PIN_PORT(pin) >= PIN_STPORT_MAX)
     {
@@ -390,6 +402,8 @@ static rt_err_t stm32_pin_irq_enable(struct rt_device *device, rt_base_t pin,
 
     if (enabled == PIN_IRQ_ENABLE)
     {
+        GPIO_InitTypeDef GPIO_InitStruct = {0};
+
         irqindex = bit2bitno(PIN_STPIN(pin));
         if (irqindex < 0 || irqindex >= (rt_int32_t)ITEM_NUM(pin_irq_map))
         {
@@ -503,13 +517,14 @@ static rt_err_t stm32_pin_irq_enable(struct rt_device *device, rt_base_t pin,
 }
 static const struct rt_pin_ops _stm32_pin_ops =
 {
-        stm32_pin_mode,
-        stm32_pin_write,
-        stm32_pin_read,
-        stm32_pin_attach_irq,
-        stm32_pin_dettach_irq,
-        stm32_pin_irq_enable,
-        stm32_pin_get,
+    stm32_pin_mode,
+    stm32_pin_write,
+    stm32_pin_read,
+    stm32_pin_attach_irq,
+    stm32_pin_dettach_irq,
+    stm32_pin_irq_enable,
+    stm32_pin_get,
+    RT_NULL,
 };
 
 rt_inline void pin_irq_hdr(int irqno)
@@ -571,7 +586,7 @@ void EXTI4_15_IRQHandler(void)
     rt_interrupt_leave();
 }
 
-#elif defined(SOC_SERIES_STM32MP1) || defined(SOC_SERIES_STM32U5)
+#elif defined(SOC_SERIES_STM32MP1) || defined(SOC_SERIES_STM32U5) || defined(SOC_SERIES_STM32H7RS)
 void EXTI0_IRQHandler(void)
 {
     rt_interrupt_enter();
@@ -792,6 +807,22 @@ int rt_hw_pin_init(void)
 
 #if defined(__HAL_RCC_GPIOK_CLK_ENABLE)
     __HAL_RCC_GPIOK_CLK_ENABLE();
+#endif
+
+#if defined(__HAL_RCC_GPIOM_CLK_ENABLE)
+    __HAL_RCC_GPIOM_CLK_ENABLE();
+#endif
+
+#if defined(__HAL_RCC_GPION_CLK_ENABLE)
+    __HAL_RCC_GPION_CLK_ENABLE();
+#endif
+
+#if defined(__HAL_RCC_GPIOO_CLK_ENABLE)
+    __HAL_RCC_GPIOO_CLK_ENABLE();
+#endif
+
+#if defined(__HAL_RCC_GPIOP_CLK_ENABLE)
+    __HAL_RCC_GPIOP_CLK_ENABLE();
 #endif
 
     return rt_device_pin_register("pin", &_stm32_pin_ops, RT_NULL);

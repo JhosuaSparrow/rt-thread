@@ -23,10 +23,7 @@
 
 #ifdef ARCH_MM_MMU
 
-#include <lwp.h>
-#include <lwp_arch.h>
-#include <lwp_mm.h>
-#include <lwp_user_mm.h>
+#include "lwp_internal.h"
 
 #include <mm_aspace.h>
 #include <mm_fault.h>
@@ -73,11 +70,29 @@ static void _null_page_fault(struct rt_varea *varea,
 
 static rt_err_t _null_shrink(rt_varea_t varea, void *new_start, rt_size_t size)
 {
+    char *varea_start = varea->start;
+    void *rm_start;
+    void *rm_end;
+
+    if (varea_start == (char *)new_start)
+    {
+        rm_start = varea_start + size;
+        rm_end = varea_start + varea->size;
+    }
+    else /* if (varea_start < (char *)new_start) */
+    {
+        RT_ASSERT(varea_start < (char *)new_start);
+        rm_start = varea_start;
+        rm_end = new_start;
+    }
+
+    rt_varea_unmap_range(varea, rm_start, rm_end - rm_start);
     return RT_EOK;
 }
 
 static rt_err_t _null_split(struct rt_varea *existed, void *unmap_start, rt_size_t unmap_len, struct rt_varea *subset)
 {
+    rt_varea_unmap_range(existed, unmap_start, unmap_len);
     return RT_EOK;
 }
 
@@ -139,31 +154,35 @@ int lwp_user_space_init(struct rt_lwp *lwp, rt_bool_t is_fork)
 void lwp_aspace_switch(struct rt_thread *thread)
 {
     struct rt_lwp *lwp = RT_NULL;
-    rt_aspace_t aspace;
-    void *from_tbl;
+    rt_aspace_t to_aspace;
+    void *from_tbl, *to_table;
 
     if (thread->lwp)
     {
         lwp = (struct rt_lwp *)thread->lwp;
-        aspace = lwp->aspace;
+        to_aspace = lwp->aspace;
+        to_table = to_aspace->page_table;
     }
     else
     {
-        aspace = &rt_kernel_space;
+        to_aspace = &rt_kernel_space;
+        /* the page table is arch dependent but not aspace->page_table */
+        to_table = arch_kernel_mmu_table_get();
     }
 
+    /* must fetch the effected page table to avoid hot update */
     from_tbl = rt_hw_mmu_tbl_get();
-    if (aspace->page_table != from_tbl)
+    if (to_table != from_tbl)
     {
-        rt_hw_aspace_switch(aspace);
+        rt_hw_aspace_switch(to_aspace);
     }
 }
 
 void lwp_unmap_user_space(struct rt_lwp *lwp)
 {
-    arch_user_space_free(lwp);
+    if (lwp->aspace)
+        arch_user_space_free(lwp);
 }
-
 
 static void *_lwp_map_user(struct rt_lwp *lwp, void *map_va, size_t map_size,
                            int text)
@@ -484,29 +503,99 @@ void *lwp_user_memory_remap_to_kernel(rt_lwp_t lwp, void *uaddr, size_t length)
 
     return kaddr;
 }
+#include <dfs_dentry.h>
+#define _AFFBLK_PGOFFSET (RT_PAGE_AFFINITY_BLOCK_SIZE >> MM_PAGE_SHIFT)
+
+static rt_base_t _aligned_for_weak_mapping(off_t *ppgoff, rt_size_t *plen, rt_size_t *palign)
+{
+    off_t aligned_pgoffset, pgoffset = *ppgoff;
+    rt_size_t length = *plen;
+    rt_size_t min_align_size = *palign;
+    rt_base_t aligned_size = 0;
+
+    if (pgoffset >= 0)
+    {
+        /* force an alignment */
+        aligned_pgoffset =
+            RT_ALIGN_DOWN(pgoffset, RT_PAGE_AFFINITY_BLOCK_SIZE >> MM_PAGE_SHIFT);
+        aligned_size = (pgoffset - aligned_pgoffset) << MM_PAGE_SHIFT;
+
+        if (aligned_pgoffset != pgoffset)
+        {
+            /**
+             * If requested pgoffset is not sitting on an aligned page offset,
+             * expand the request mapping to force an alignment.
+             */
+            length += aligned_size;
+            pgoffset = aligned_pgoffset;
+        }
+
+        /**
+         * As this is a weak mapping, we can pick any reasonable address for our
+         * requirement.
+         */
+        min_align_size = RT_PAGE_AFFINITY_BLOCK_SIZE;
+    }
+    else
+    {
+        RT_ASSERT(0 && "Unexpected input");
+    }
+
+    *ppgoff = pgoffset;
+    *plen = length;
+    *palign = min_align_size;
+
+    return aligned_size;
+}
 
 void *lwp_mmap2(struct rt_lwp *lwp, void *addr, size_t length, int prot,
                 int flags, int fd, off_t pgoffset)
 {
     rt_err_t rc;
-    rt_size_t k_attr;
-    rt_size_t k_flags;
-    rt_size_t k_offset;
+    rt_size_t k_attr, k_flags, k_offset, aligned_size = 0;
+    rt_size_t min_align_size = 1 << MM_PAGE_SHIFT;
     rt_aspace_t uspace;
     rt_mem_obj_t mem_obj;
     void *ret = 0;
-    LOG_D("%s(addr=0x%lx,length=%ld,fd=%d)", __func__, addr, length, fd);
+    LOG_D("%s(addr=0x%lx,length=0x%lx,fd=%d,pgoff=0x%lx)", __func__, addr, length, fd, pgoffset);
+
+    /* alignment for affinity page block */
+    if (flags & MAP_FIXED)
+    {
+        if (fd != -1)
+        {
+            /* requested mapping address */
+            rt_base_t va_affid = RT_PAGE_PICK_AFFID(addr);
+            rt_base_t pgoff_affid = RT_PAGE_PICK_AFFID(pgoffset << MM_PAGE_SHIFT);
+
+            /* filter illegal align address */
+            if (va_affid != pgoff_affid)
+            {
+                LOG_W("Unaligned mapping address %p(pgoff=0x%lx) from fd=%d",
+                    addr, pgoffset, fd);
+            }
+        }
+        else
+        {
+            /* anonymous mapping can always aligned */
+        }
+    }
+    else
+    {
+        /* weak address selection */
+        aligned_size = _aligned_for_weak_mapping(&pgoffset, &length, &min_align_size);
+    }
 
     if (fd == -1)
     {
-        /**
-         * todo: add threshold
-         */
+    #ifdef RT_DEBUGGING_PAGE_THRESHOLD
         if (!_memory_threshold_ok())
             return (void *)-ENOMEM;
+    #endif /* RT_DEBUGGING_PAGE_THRESHOLD */
 
         k_offset = MM_PA_TO_OFF(addr);
-        k_flags = lwp_user_mm_flag_to_kernel(flags) | MMF_MAP_PRIVATE;
+        k_flags = MMF_CREATE(lwp_user_mm_flag_to_kernel(flags) | MMF_MAP_PRIVATE,
+                             min_align_size);
         k_attr = lwp_user_mm_attr_to_kernel(prot);
 
         uspace = lwp->aspace;
@@ -534,6 +623,7 @@ void *lwp_mmap2(struct rt_lwp *lwp, void *addr, size_t length, int prot,
 
             mmap2.addr = addr;
             mmap2.length = length;
+            mmap2.min_align_size = min_align_size;
             mmap2.prot = prot;
             mmap2.flags = flags;
             mmap2.pgoffset = pgoffset;
@@ -553,7 +643,15 @@ void *lwp_mmap2(struct rt_lwp *lwp, void *addr, size_t length, int prot,
     }
 
     if ((long)ret <= 0)
+    {
         LOG_D("%s() => %ld", __func__, ret);
+    }
+    else
+    {
+        ret = (char *)ret + aligned_size;
+        LOG_D("%s() => 0x%lx", __func__, ret);
+    }
+
     return ret;
 }
 
@@ -564,6 +662,14 @@ int lwp_munmap(struct rt_lwp *lwp, void *addr, size_t length)
     RT_ASSERT(lwp);
     ret = rt_aspace_unmap_range(lwp->aspace, addr, length);
     return lwp_errno_to_posix(ret);
+}
+
+void *lwp_mremap(struct rt_lwp *lwp, void *old_address, size_t old_size,
+                    size_t new_size, int flags, void *new_address)
+{
+    RT_ASSERT(lwp);
+
+    return rt_aspace_mremap_range(lwp->aspace, old_address, old_size, new_size, flags, new_address);
 }
 
 size_t lwp_get_from_user(void *dst, void *src, size_t size)
@@ -621,11 +727,6 @@ size_t lwp_put_to_user(void *dst, void *src, size_t size)
     return lwp_data_put(lwp, dst, src, size);
 }
 
-rt_inline rt_bool_t _in_user_space(const char *addr)
-{
-    return (addr >= (char *)USER_VADDR_START && addr < (char *)USER_VADDR_TOP);
-}
-
 rt_inline rt_bool_t _can_unaligned_access(const char *addr)
 {
     return rt_kmem_v2p((char *)addr) - PV_OFFSET == addr;
@@ -636,9 +737,9 @@ void *lwp_memcpy(void * __restrict dst, const void * __restrict src, size_t size
     void *rc = dst;
     long len;
 
-    if (_in_user_space(dst))
+    if (lwp_in_user_space(dst))
     {
-        if (!_in_user_space(src))
+        if (!lwp_in_user_space(src))
         {
             len = lwp_put_to_user(dst, (void *)src, size);
             if (!len)
@@ -654,7 +755,7 @@ void *lwp_memcpy(void * __restrict dst, const void * __restrict src, size_t size
     }
     else
     {
-        if (_in_user_space(src))
+        if (lwp_in_user_space(src))
         {
             len = lwp_get_from_user(dst, (void *)src, size);
             if (!len)
@@ -979,72 +1080,12 @@ size_t lwp_user_strlen(const char *s)
     return lwp_user_strlen_ext(lwp, s);
 }
 
-
-char** lwp_get_command_line_args(struct rt_lwp *lwp)
+size_t lwp_strlen(struct rt_lwp *lwp, const char *s)
 {
-    size_t argc = 0;
-    char** argv = NULL;
-    int ret;
-    size_t i;
-    size_t len;
-
-    if (lwp)
-    {
-        ret = lwp_data_get(lwp, &argc, lwp->args, sizeof(argc));
-        if (ret == 0)
-        {
-            return RT_NULL;
-        }
-        argv = (char**)rt_malloc((argc + 1) * sizeof(char*));
-
-        if (argv)
-        {
-            for (i = 0; i < argc; i++)
-            {
-                char *argvp = NULL;
-                ret = lwp_data_get(lwp, &argvp, &((char **)lwp->args)[1 + i], sizeof(argvp));
-                if (ret == 0)
-                {
-                    lwp_free_command_line_args(argv);
-                    return RT_NULL;
-                }
-                len = lwp_user_strlen_ext(lwp, argvp);
-
-                if (len > 0)
-                {
-                    argv[i] = (char*)rt_malloc(len + 1);
-                    ret = lwp_data_get(lwp, argv[i], argvp, len);
-                    if (ret == 0)
-                    {
-                        lwp_free_command_line_args(argv);
-                        return RT_NULL;
-                    }
-                    argv[i][len] = '\0';
-                }
-                else
-                {
-                    argv[i] = NULL;
-                }
-            }
-            argv[argc] = NULL;
-        }
-    }
-
-    return argv;
-}
-
-void lwp_free_command_line_args(char** argv)
-{
-    size_t i;
-
-    if (argv)
-    {
-        for (i = 0; argv[i]; i++)
-        {
-            rt_free(argv[i]);
-        }
-        rt_free(argv);
-    }
+    if (lwp_in_user_space(s))
+        return lwp_user_strlen_ext(lwp, s);
+    else
+        return strlen(s);
 }
 
 #endif

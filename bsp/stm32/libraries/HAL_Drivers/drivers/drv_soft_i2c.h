@@ -26,7 +26,7 @@ struct stm32_soft_i2c_config
 struct stm32_i2c
 {
     struct rt_i2c_bit_ops ops;
-    struct rt_i2c_bus_device i2c2_bus;
+    struct rt_i2c_bus_device i2c_bus;
 };
 
 #ifdef BSP_USING_I2C1
@@ -62,6 +62,15 @@ struct stm32_i2c
         .scl = BSP_I2C4_SCL_PIN,                         \
         .sda = BSP_I2C4_SDA_PIN,                         \
         .bus_name = "i2c4",                              \
+    }
+#endif
+
+#ifdef BSP_USING_I2C5
+#define I2C5_BUS_CONFIG                                  \
+    {                                                    \
+        .scl = BSP_I2C5_SCL_PIN,                         \
+        .sda = BSP_I2C5_SDA_PIN,                         \
+        .bus_name = "i2c5",                              \
     }
 #endif
 int rt_hw_i2c_init(void);

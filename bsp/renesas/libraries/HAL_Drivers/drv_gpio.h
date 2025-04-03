@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2021, RT-Thread Development Team
+ * Copyright (c) 2006-2025, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -23,8 +23,13 @@
 extern "C" {
 #endif
 
+#ifdef SOC_SERIES_R9A07G0
+#define RA_MIN_PIN_VALUE    BSP_IO_PORT_00_PIN_0
+#define RA_MAX_PIN_VALUE    BSP_IO_PORT_24_PIN_7
+#else
 #define RA_MIN_PIN_VALUE    BSP_IO_PORT_00_PIN_00
 #define RA_MAX_PIN_VALUE    BSP_IO_PORT_11_PIN_15
+#endif
 
 #ifdef R_ICU_H
 struct ra_pin_irq_map

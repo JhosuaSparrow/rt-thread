@@ -90,7 +90,7 @@ void rt_components_board_init(void)
     const struct rt_init_desc *desc;
     for (desc = &__rt_init_desc_rti_board_start; desc < &__rt_init_desc_rti_board_end; desc ++)
     {
-        rt_kprintf("initialize %s", desc->fn_name);
+        rt_kprintf("initialize %s\n", desc->fn_name);
         result = desc->fn();
         rt_kprintf(":%d done\n", result);
     }
@@ -116,7 +116,7 @@ void rt_components_init(void)
     rt_kprintf("do components initialization.\n");
     for (desc = &__rt_init_desc_rti_board_end; desc < &__rt_init_desc_rti_end; desc ++)
     {
-        rt_kprintf("initialize %s", desc->fn_name);
+        rt_kprintf("initialize %s\n", desc->fn_name);
         result = desc->fn();
         rt_kprintf(":%d done\n", result);
     }
@@ -178,9 +178,10 @@ struct rt_thread main_thread;
  *
  * @param  parameter is the arg of the thread.
  */
-void main_thread_entry(void *parameter)
+static void main_thread_entry(void *parameter)
 {
     extern int main(void);
+    RT_UNUSED(parameter);
 
 #ifdef RT_USING_COMPONENTS_INIT
     /* RT-Thread components initialization */
@@ -198,7 +199,7 @@ void main_thread_entry(void *parameter)
     }
 #elif defined(__ICCARM__) || defined(__GNUC__) || defined(__TASKING__) || defined(__TI_COMPILER_VERSION__)
     main();
-#endif
+#endif /* __ARMCC_VERSION */
 }
 
 /**
@@ -271,6 +272,9 @@ int rtthread_startup(void)
 
     /* idle thread initialization */
     rt_thread_idle_init();
+
+    /* defunct thread initialization */
+    rt_thread_defunct_init();
 
 #ifdef RT_USING_SMP
     rt_hw_spin_lock(&_cpus_lock);

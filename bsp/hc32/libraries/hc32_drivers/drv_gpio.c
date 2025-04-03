@@ -1,12 +1,13 @@
 /*
- * Copyright (c) 2006-2022, RT-Thread Development Team
- * Copyright (c) 2022, Xiaohua Semiconductor Co., Ltd.
+ * Copyright (C) 2022-2024, Xiaohua Semiconductor Co., Ltd.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
  * Change Logs:
  * Date           Author       Notes
  * 2022-04-28     CDT          first version
+ * 2023-10-09     CDT          support HC32F448
+ * 2024-06-12     CDT          support external interrupt for HC32F448/HC32F472
  */
 
 #include <rtthread.h>
@@ -14,7 +15,9 @@
 #include "drv_gpio.h"
 #include "board_config.h"
 
-#ifdef RT_USING_PIN
+#if defined(RT_USING_PIN)
+
+#if defined(BSP_USING_GPIO)
 
 #define GPIO_PIN_INDEX(pin)             ((uint8_t)((pin) & 0x0F))
 #define PIN_NUM(port, pin)              (((((port) & 0x0F) << 4) | ((pin) & 0x0F)))
@@ -25,6 +28,10 @@
     #define PIN_MAX_NUM                     ((GPIO_PORT_I * 16) + (__CLZ(__RBIT(GPIO_PIN_13))) + 1)
 #elif defined (HC32F460)
     #define PIN_MAX_NUM                     ((GPIO_PORT_H * 16) + (__CLZ(__RBIT(GPIO_PIN_02))) + 1)
+#elif defined (HC32F448)
+    #define PIN_MAX_NUM                     ((GPIO_PORT_H * 16) + (__CLZ(__RBIT(GPIO_PIN_02))) + 1)
+#elif defined (HC32F472)
+    #define PIN_MAX_NUM                     ((GPIO_PORT_F * 16) + (__CLZ(__RBIT(GPIO_PIN_08))) + 1)
 #endif
 
 #define ITEM_NUM(items)                 sizeof(items) / sizeof(items[0])
@@ -222,6 +229,88 @@ static void extint15_irq_handler(void)
     rt_interrupt_leave();
 }
 
+#if defined (HC32F448) || defined (HC32F472)
+void EXTINT00_SWINT16_Handler(void)
+{
+    extint0_irq_handler();
+}
+
+void EXTINT01_SWINT17_Handler(void)
+{
+    extint1_irq_handler();
+}
+
+void EXTINT02_SWINT18_Handler(void)
+{
+    extint2_irq_handler();
+}
+
+void EXTINT03_SWINT19_Handler(void)
+{
+    extint3_irq_handler();
+}
+
+void EXTINT04_SWINT20_Handler(void)
+{
+    extint4_irq_handler();
+}
+
+void EXTINT05_SWINT21_Handler(void)
+{
+    extint5_irq_handler();
+}
+
+void EXTINT06_SWINT22_Handler(void)
+{
+    extint6_irq_handler();
+}
+
+void EXTINT07_SWINT23_Handler(void)
+{
+    extint7_irq_handler();
+}
+
+void EXTINT08_SWINT24_Handler(void)
+{
+    extint8_irq_handler();
+}
+
+void EXTINT09_SWINT25_Handler(void)
+{
+    extint9_irq_handler();
+}
+
+void EXTINT10_SWINT26_Handler(void)
+{
+    extint10_irq_handler();
+}
+
+void EXTINT11_SWINT27_Handler(void)
+{
+    extint11_irq_handler();
+}
+
+void EXTINT12_SWINT28_Handler(void)
+{
+    extint12_irq_handler();
+}
+
+void EXTINT13_SWINT29_Handler(void)
+{
+    extint13_irq_handler();
+}
+
+void EXTINT14_SWINT30_Handler(void)
+{
+    extint14_irq_handler();
+}
+
+void EXTINT15_SWINT31_Handler(void)
+{
+    extint15_irq_handler();
+}
+#endif
+
 static void hc32_pin_mode(struct rt_device *device, rt_base_t pin, rt_uint8_t mode)
 {
     stc_gpio_init_t stcGpioInit;
@@ -248,6 +337,9 @@ static void hc32_pin_mode(struct rt_device *device, rt_base_t pin, rt_uint8_t mo
     case PIN_MODE_INPUT_PULLDOWN:
         stcGpioInit.u16PinDir   = PIN_DIR_IN;
         stcGpioInit.u16PullUp   = PIN_PU_OFF;
+#if defined (HC32F448) || defined (HC32F472)
+        stcGpioInit.u16PullDown = PIN_PD_ON;
+#endif
         break;
     case PIN_MODE_OUTPUT_OD:
         stcGpioInit.u16PinDir        = PIN_DIR_OUT;
@@ -279,11 +371,11 @@ static void hc32_pin_write(struct rt_device *device, rt_base_t pin, rt_uint8_t v
     }
 }
 
-static rt_int8_t hc32_pin_read(struct rt_device *device, rt_base_t pin)
+static rt_ssize_t hc32_pin_read(struct rt_device *device, rt_base_t pin)
 {
     uint8_t  gpio_port;
     uint16_t gpio_pin;
-    rt_int8_t value = PIN_LOW;
+    int value = PIN_LOW;
 
     if (pin < PIN_MAX_NUM)
     {
@@ -297,6 +389,10 @@ static rt_int8_t hc32_pin_read(struct rt_device *device, rt_base_t pin)
         {
             value = PIN_HIGH;
         }
+    }
+    else
+    {
+        return -RT_EINVAL;
     }
 
     return value;
@@ -503,5 +599,7 @@ int rt_hw_pin_init(void)
 
     return rt_device_pin_register("pin", &hc32_pin_ops, RT_NULL);
 }
+
+#endif
 
 #endif  /* RT_USING_PIN */

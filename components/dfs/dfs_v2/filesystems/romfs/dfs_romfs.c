@@ -352,7 +352,7 @@ static int dfs_romfs_getdents(struct dfs_file *file, struct dirent *dirp, uint32
 
         d->d_namlen = rt_strlen(name);
         d->d_reclen = (rt_uint16_t)sizeof(struct dirent);
-        rt_strncpy(d->d_name, name, DFS_PATH_MAX);
+        rt_strncpy(d->d_name, name, DIRENT_NAME_MAX);
 
         /* move to next position */
         ++ file->fpos;
@@ -365,6 +365,7 @@ static const struct dfs_file_ops _rom_fops =
 {
     .open             = dfs_romfs_open,
     .close            = dfs_romfs_close,
+    .ioctl            = dfs_romfs_ioctl,
     .lseek            = generic_dfs_lseek,
     .read             = dfs_romfs_read,
     .getdents         = dfs_romfs_getdents,

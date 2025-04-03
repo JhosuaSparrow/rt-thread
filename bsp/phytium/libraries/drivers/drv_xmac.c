@@ -756,14 +756,12 @@ void FXmacErrorHandler(void *arg, u8 direction, u32 error_word)
                 if (error_word & FXMAC_RXSR_RXOVR_MASK)
                 {
                     LOG_I("Receive over run.");
-                    FXmacRecvHandler(instance_p);
-                    SetupRxBds(instance_p, rxring);
+                    FXmacRecvHandler(arg);
                 }
                 if (error_word & FXMAC_RXSR_BUFFNA_MASK)
                 {
                     LOG_I("Receive buffer not available.");
                     FXmacRecvHandler(arg);
-                    SetupRxBds(instance_p, rxring);
                 }
                 break;
             case FXMAC_SEND:
@@ -801,9 +799,6 @@ void FXmacLinkChange(void *arg)
 {
     u32 ctrl;
     u32 link, link_status;
-    u32 speed;
-    u32 speed_bit;
-    u32 duplex;
     FXmac *xmac_p;
     FXmacOs *instance_p;
 
@@ -815,63 +810,21 @@ void FXmacLinkChange(void *arg)
         LOG_I("xmac_p->config.base_address is %p", xmac_p->config.base_address);
         ctrl = FXMAC_READREG32(xmac_p->config.base_address, FXMAC_PCS_AN_LP_OFFSET);
         link = (ctrl & FXMAC_PCS_LINK_PARTNER_NEXT_PAGE_STATUS) >> 15;
-        LOG_I("Link status is 0x%x", link);
+
 
         switch (link)
         {
             case 0:
+                LOG_I("Link status is down");
                 link_status = FXMAC_LINKDOWN;
                 break;
             case 1:
+                LOG_I("Link status is up");
                 link_status = FXMAC_LINKUP;
                 break;
             default:
                 LOG_E("Link status is error 0x%x ", link);
                 return;
-        }
-
-        if (xmac_p->config.auto_neg == 0)
-        {
-            if (link_status == FXMAC_LINKUP)
-            {
-                LOG_I("No neg link up (%d/%s)", xmac_p->config.speed, xmac_p->config.duplex == 1 ? "FULL" : "Half");
-                xmac_p->link_status = FXMAC_NEGOTIATING;
-            }
-            else
-            {
-                LOG_I("No neg link down.");
-                xmac_p->link_status = FXMAC_LINKDOWN;
-            }
-        }
-
-        /* read sgmii reg to get status */
-        ctrl = FXMAC_READREG32(xmac_p->config.base_address, FXMAC_PCS_AN_LP_OFFSET);
-        speed_bit = (ctrl & FXMAC_PCS_AN_LP_SPEED) >> FXMAC_PCS_AN_LP_SPEED_OFFSET;
-        duplex = (ctrl & FXMAC_PCS_AN_LP_DUPLEX) >> FXMAC_PCS_AN_LP_DUPLEX_OFFSET;
-
-        if (speed_bit == 2)
-        {
-            speed = FXMAC_SPEED_1000;
-        }
-        else if (speed_bit == 1)
-        {
-            speed = FXMAC_SPEED_100;
-        }
-        else
-        {
-            speed = FXMAC_SPEED_10;
-        }
-
-        if (link_status != xmac_p->link_status)
-        {
-            LOG_I("Sgmii link_status has changed.");
-        }
-
-        /* add erase NCFGR config */
-        if ((speed != xmac_p->config.speed) || (duplex != xmac_p->config.duplex))
-        {
-            LOG_I("Sgmii link_status has changed.");
-            LOG_I("New speed is %d, duplex is %d", speed, duplex);
         }
 
         if (link_status == FXMAC_LINKUP)
@@ -884,8 +837,7 @@ void FXmacLinkChange(void *arg)
         }
         else
         {
-            xmac_p->link_status = link_status;
-            LOG_I("Change status is 0x%x", link_status);
+            xmac_p->link_status = FXMAC_LINKDOWN;
         }
     }
 }
@@ -962,7 +914,7 @@ enum lwip_port_link_status FXmacLwipPortLinkDetect(FXmacOs *instance_p)
             if ((phy_link_status == FXMAC_LINKUP) && FXmacPhyAutonegStatus(xmac_p, xmac_p->phy_address))
             {
                 err_t phy_ret;
-                phy_ret = FXmacPhyInit(xmac_p, xmac_p->config.speed, xmac_p->config.duplex, xmac_p->config.auto_neg);
+                phy_ret = FXmacPhyInit(xmac_p, xmac_p->config.speed, xmac_p->config.duplex, xmac_p->config.auto_neg, XMAC_PHY_RESET_DISABLE);
 
                 if (phy_ret != FT_SUCCESS)
                 {
@@ -996,7 +948,7 @@ enum lwip_port_link_status FXmacPhyReconnect(FXmacOs *instance_p)
         {
             /* auto negotiation again*/
             err_t phy_ret;
-            phy_ret = FXmacPhyInit(xmac_p, xmac_p->config.speed, xmac_p->config.duplex, xmac_p->config.auto_neg);
+            phy_ret = FXmacPhyInit(xmac_p, xmac_p->config.speed, xmac_p->config.duplex, xmac_p->config.auto_neg, XMAC_PHY_RESET_DISABLE);
             if (phy_ret != FT_SUCCESS)
             {
                 LOG_I("FXmacPhyInit is error.");
@@ -1047,8 +999,6 @@ static void FxmacOsIntrHandler(s32 vector, void *args)
 
 static void FXmacSetupIsr(FXmacOs *instance_p)
 {
-    u32 cpu_id;
-    GetCpuId(&cpu_id);
 
     /* Setup callbacks */
     FXmacSetHandler(&instance_p->instance, FXMAC_HANDLER_DMARECV, FXmacRecvSemaphoreHandler, instance_p);
@@ -1197,7 +1147,7 @@ FError FXmacOsInit(FXmacOs *instance_p)
     }
 
     /* initialize phy */
-    status = FXmacPhyInit(xmac_p, xmac_p->config.speed, xmac_p->config.duplex, xmac_p->config.auto_neg);
+    status = FXmacPhyInit(xmac_p, xmac_p->config.speed, xmac_p->config.duplex, xmac_p->config.auto_neg, XMAC_PHY_RESET_ENABLE);
     if (status != FT_SUCCESS)
     {
         LOG_W("FXmacPhyInit is error.");
@@ -1269,34 +1219,18 @@ FError FXmacOsTx(FXmacOs *instance_p, void *tx_buf)
 {
     FXmacBdRing *txring;
     FError ret;
-    u32 n_pbufs;
     struct pbuf *p;
-    struct pbuf *q;
     FASSERT(instance_p != NULL);
-    if (tx_buf == NULL)
-    {
-        LOG_E("tx_buf is null.");
-        return FREERTOS_XMAC_PARAM_ERROR;
-    }
+    FASSERT(tx_buf != NULL);
 
     p = tx_buf;
     txring = &(FXMAC_GET_TXRING(instance_p->instance));
-
-    for (q = p, n_pbufs = 0; q != NULL; q = q->next)
-    {
-        n_pbufs++;
-    }
+    FXmacProcessSentBds(instance_p, txring);
 
     /* check if space is available to send */
-    if (txring->free_cnt < n_pbufs)
-    {
-        FXmacProcessSentBds(instance_p, txring);
-    }
-
     if (IsTxSpaceAvailable(instance_p))
     {
-        FXmacOsOutput(instance_p, p);
-        ret = FT_SUCCESS;
+        ret = FXmacOsOutput(instance_p, p);
     }
     else
     {
@@ -1439,7 +1373,6 @@ rt_err_t rt_xmac_tx(rt_device_t dev, struct pbuf *p)
 {
     FXmacOs *pOsMac;
     struct eth_device *pXmacParent;
-    rt_base_t level;
     FError  ret;
 
     pXmacParent = rt_container_of(dev, struct eth_device, parent);
@@ -1453,8 +1386,6 @@ rt_err_t rt_xmac_tx(rt_device_t dev, struct pbuf *p)
     {
         return -RT_ENOMEM;
     }
-
-
 
 #if RT_LWIP_ETH_PAD_SIZE
     pbuf_header(p, -RT_LWIP_ETH_PAD_SIZE); /* reclaim the padding word */
@@ -1479,7 +1410,6 @@ struct pbuf *rt_xmac_rx(rt_device_t dev)
     FXmacOs *pOsMac;
     struct eth_device *pXmacParent;
     struct pbuf *p;
-    rt_base_t level;
 
     pXmacParent = rt_container_of(dev, struct eth_device, parent);
     if (NULL == pXmacParent)
@@ -1493,10 +1423,8 @@ struct pbuf *rt_xmac_rx(rt_device_t dev)
         return RT_NULL;
     }
 
-    level = rt_hw_interrupt_disable();
     FXmacRecvHandler(pOsMac);
     p = FXmacOsRx(pOsMac);
-    rt_hw_interrupt_enable(level);
     return p;
 }
 
@@ -1514,58 +1442,71 @@ enum lwip_port_link_status eth_link_detect(FXmacOs *instance_p)
 
 static void ethernet_link_thread(void *Args)
 {
-    FXmacOs *pOsMac;
-    static int is_link_up = 0;
+
     if (RT_NULL == Args)
     {
         return;
     }
 
+    FXmacOs *pOsMac;
     pOsMac = (FXmacOs *)Args;
 
     while (1)
     {
-        /* Call eth_link_detect() every 10ms to detect Ethernet link
+        /* Call eth_link_detect() every 500ms to detect Ethernet link
          * change.
          */
 
         switch (eth_link_detect(pOsMac))
         {
             case ETH_LINK_UP:
-                if (is_link_up == 0)
+                if (pOsMac->is_link_up == 0)
                 {
-                    rt_kprintf("link up\n");
-                    is_link_up = 1;
+                    LOG_I("netif flag is link_up\n");
+                    pOsMac->is_link_up = 1;
                     eth_device_linkchange(&pOsMac->parent, RT_TRUE);
                 }
                 break;
             case ETH_LINK_DOWN:
             default:
-                if (is_link_up == 1)
+                if (pOsMac->is_link_up == 1)
                 {
-                    rt_kprintf("link down\n");
-                    is_link_up = 0;
+                    LOG_I("netif flag is link_down\n");
+                    pOsMac->is_link_up = 0;
                     eth_device_linkchange(&pOsMac->parent, RT_FALSE);
                 }
                 break;
         }
-        rt_thread_mdelay(10);
+        rt_thread_mdelay(500);
     }
 }
 
-
-
+#ifdef RT_USING_DEVICE_OPS
+const struct rt_device_ops net_ops=
+{
+    rt_xmac_init,
+    rt_xmac_open,
+    rt_xmac_close,
+    rt_xmac_read,
+    rt_xmac_write,
+    rt_xmac_control
+};
+#endif
 
 static int rt_hw_xmac_init(FXmacOs *pOsMac, const char *name, const char *link_thread_name)
 {
     rt_err_t state = RT_EOK;
 
+    #ifdef RT_USING_DEVICE_OPS
+    pOsMac->parent.parent.ops= &net_ops;
+    #else
     pOsMac->parent.parent.init = rt_xmac_init;
     pOsMac->parent.parent.open = rt_xmac_open;
     pOsMac->parent.parent.close = rt_xmac_close;
     pOsMac->parent.parent.read = rt_xmac_read;
     pOsMac->parent.parent.write = rt_xmac_write;
     pOsMac->parent.parent.control = rt_xmac_control;
+    #endif
     pOsMac->parent.parent.user_data = RT_NULL;
 
     pOsMac->parent.eth_rx = rt_xmac_rx;
@@ -1589,7 +1530,7 @@ static int rt_hw_xmac_init(FXmacOs *pOsMac, const char *name, const char *link_t
                            pOsMac,
                            &pOsMac->_link_thread_stack[0],
                            sizeof(pOsMac->_link_thread_stack),
-                           10, 2);
+                           12, 2);
     if (RT_EOK == state)
     {
         rt_thread_startup(&pOsMac->_link_thread);
@@ -1599,8 +1540,6 @@ static int rt_hw_xmac_init(FXmacOs *pOsMac, const char *name, const char *link_t
         LOG_E("rt_thread_init is error");
         return -RT_ERROR;
     }
-
-    FXmacOsStart(pOsMac);
 
     return RT_EOK;
 }
@@ -1663,11 +1602,18 @@ static int rt_hw_xmac_eth_init(void)
         goto __exit;
     }
 #endif
+
+#if defined(MAC_NUM0)
+        rt_kprintf("Start Xmac NUM0 \n");
+        FXmacOsStart(&fxmac_os_instace[MAC_NUM0_CONTROLLER]);
+#endif
+#if defined(MAC_NUM1)
+        rt_kprintf("Start Xmac NUM1 \n");
+        FXmacOsStart(&fxmac_os_instace[MAC_NUM1_CONTROLLER]);
+#endif
+
 __exit:
     return state;
 }
 INIT_DEVICE_EXPORT(rt_hw_xmac_eth_init);
-
 #endif
-
-

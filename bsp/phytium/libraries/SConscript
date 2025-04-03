@@ -49,6 +49,28 @@ if GetDepend(['TARGET_D2000']):
     src += Glob(cwd+'/port/soc_port/d2000/*.c')
     path += [PHYTIUM_SDK_DIR + '/soc/d2000'] 
 
+# board port
+if GetDepend(['E2000D_DEMO_BOARD']):
+    path += cwd + '/fboard_port/e2000d_demo'
+
+if GetDepend(['E2000D_DEMO_BOARD']):
+    path += cwd + '/fboard_port/e2000q_demo'
+
+if GetDepend(['FIREFLY_DEMO_BOARD']):  
+    path += cwd + '/fboard_port/firefly'
+
+if GetDepend(['BSP_USING_SDCARD_FATFS']):
+    if GetDepend(['E2000D_DEMO_BOARD']):
+        src += Glob(cwd + '/port/fboard_port/e2000d_demo/mnt_sdcard.c')
+
+    if GetDepend(['E2000Q_DEMO_BOARD']):
+        src += Glob(cwd + '/port/fboard_port/e2000q_demo/mnt_sdcard.c')
+
+    if GetDepend(['FIREFLY_DEMO_BOARD']):   
+        src += Glob(cwd + '/port/fboard_port/firefly/mnt_sdcard.c')
+else:
+    src += Glob(cwd + '/port/fboard_port/mnt_ramdisk.c')
+
 # driver
 path += [PORT_DRV_DIR]
 
@@ -86,6 +108,12 @@ if GetDepend(['BSP_USING_SDIF']):
 if GetDepend(['BSP_USING_GPIO']):
     src += Glob(PHYTIUM_SDK_DIR+'/drivers/pin/fgpio/*.c') + Glob(PORT_DRV_DIR+'/drv_gpio.c')
     path += [PHYTIUM_SDK_DIR + '/drivers/pin/fgpio/']
+    if GetDepend(['TARGET_E2000D']):
+        src +=  Glob(PHYTIUM_SDK_DIR+'/soc/e2000/fgpio_table.c')
+    if GetDepend(['TARGET_E2000Q']):
+        src +=  Glob(PHYTIUM_SDK_DIR+'/soc/e2000/fgpio_table.c')
+    if GetDepend(['TARGET_PHYTIUMPI']):
+        src +=  Glob(PHYTIUM_SDK_DIR+'/soc/phytiumpi/fgpio_table.c')
 
 ## pwm
 if GetDepend(['BSP_USING_PWM']):
@@ -148,7 +176,6 @@ src += Glob(cwd+'/port/fdriver_port/*.c')
 path += [cwd + '/port/fdriver_port']
 
 ## fboard port
-src += Glob(cwd+'/port/fboard_port/*.c')
 path += [cwd + '/port/fboard_port']
 
 ## lwip port
@@ -156,16 +183,7 @@ src += Glob(cwd+'/port/lwip_port/*.c')
 path += [cwd + '/port/lwip_port']
 
 ## cherryusb port
-if GetDepend(['BSP_USING_XHCI']):
-    src += Glob(cwd +'/port/cherryusb_port/drv_xhci.c')
-    path += [cwd + '/port/cherryusb_port']
-
-if GetDepend(['BSP_USING_PUSB2']):
-    if GetDepend(['PKG_CHERRYUSB_HOST_PUSB2']):
-        src += Glob(cwd +'/port/cherryusb_port/drv_pusb2_hc.c')
-    if GetDepend(['PKG_CHERRYUSB_DEVICE_PUSB2']):
-        src += Glob(cwd +'/port/cherryusb_port/drv_pusb2_dc.c')
-    path += [cwd + '/port/cherryusb_port']
+src += Glob(cwd + '/port/cherryusb_port/*.c')
 
 # phytium ports rt-thread examples
 PORT_DRV_DIR = cwd + '/examples'

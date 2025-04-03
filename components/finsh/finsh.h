@@ -35,6 +35,14 @@ typedef long (*syscall_func)(void);
 #define __TI_FINSH_EXPORT_FUNCTION(f)  PRAGMA(DATA_SECTION(f,"FSymTab"))
 #endif /* __TI_COMPILER_VERSION__ */
 
+/**
+ * @brief Macro to export a command along with its name, description, and options to the symbol table in MSVC.
+ *
+ * @param[in] name The function name associated with the command.
+ * @param[in] cmd The command name.
+ * @param[in] desc The description of the command.
+ * @param[in] opt The options associated with the command, used for option completion.
+ */
 #ifdef _MSC_VER
 #define MSH_FUNCTION_EXPORT_CMD(name, cmd, desc, opt)               \
                 const char __fsym_##cmd##_name[] = #cmd;            \
@@ -80,9 +88,11 @@ typedef long (*syscall_func)(void);
                 };
 
 #endif  /* _MSC_VER */
-#endif /* end of FINSH_USING_SYMTAB */
+#endif /* FINSH_USING_SYMTAB */
 
-
+/**
+ * @brief Macro definitions to simplify the declaration of exported functions or commands.
+ */
 #define __MSH_GET_MACRO(_1, _2, _3, _FUN, ...)  _FUN
 #define __MSH_GET_EXPORT_MACRO(_1, _2, _3, _4, _FUN, ...) _FUN
 
@@ -100,52 +110,68 @@ typedef long (*syscall_func)(void);
 
 
 /**
- * @ingroup finsh
+ * @ingroup group_finsh
  *
- * This macro exports a system function to finsh shell.
+ * @brief This macro exports a system function to finsh shell.
  *
- * @param name the name of function.
- * @param desc the description of function, which will show in help.
+ * @param[in] name Name of function.
+ * @param[in] desc Description of function, which will show in help.
  */
 #define FINSH_FUNCTION_EXPORT(name, desc)
 
 /**
- * @ingroup finsh
+ * @ingroup group_finsh
  *
- * This macro exports a system function with an alias name to finsh shell.
+ * @brief Exports a system function with an alias name to finsh shell.
  *
- * @param name the name of function.
- * @param alias the alias name of function.
- * @param desc the description of function, which will show in help.
+ * @param[in] name Name of function.
+ * @param[in] alias Alias name of function.
+ * @param[in] desc Description of function, which will show in help.
  */
 #define FINSH_FUNCTION_EXPORT_ALIAS(name, alias, desc)
 
 /**
- * @ingroup msh
+ * @ingroup group_finsh
  *
- * This macro exports a command to module shell.
+ * @brief Exports a command to module shell.
  *
- * @param command is the name of the command.
- * @param desc is the description of the command, which will show in help list.
- * @param opt This is an option, enter any content to enable option completion
+ * @b Parameters
+ *
+ * <tt>[in]</tt> @b command Name of the command.
+ *
+ * <tt>[in]</tt> @b desc    Description of the command, which will show in help list.
+ *
+ * <tt>[in]</tt> @b opt     This is an option, enter any content to enable option completion
+ *
+ * @note This macro can be used in two ways:
+ * @code MSH_CMD_EXPORT(command, desc) @endcode
+ * or
+ * @code MSH_CMD_EXPORT(command, desc, opt) @endcode
  */
-/* MSH_CMD_EXPORT(command, desc) or MSH_CMD_EXPORT(command, desc, opt) */
 #define MSH_CMD_EXPORT(...)                                 \
     __MSH_GET_MACRO(__VA_ARGS__, _MSH_FUNCTION_CMD2_OPT,    \
         _MSH_FUNCTION_CMD2)(__VA_ARGS__)
 
 /**
- * @ingroup msh
+ * @ingroup group_finsh
  *
- * This macro exports a command with alias to module shell.
+ * @brief Exports a command with alias to module shell.
  *
- * @param command is the name of the command.
- * @param alias is the alias of the command.
- * @param desc is the description of the command, which will show in help list.
- * @param opt This is an option, enter any content to enable option completion
+ * @b Parameters
+ *
+ * <tt>[in]</tt> @b command Name of the command.
+ *
+ * <tt>[in]</tt> @b alias   Alias of the command.
+ *
+ * <tt>[in]</tt> @b desc    Description of the command, which will show in help list.
+ *
+ * <tt>[in]</tt> @b opt     An option, enter any content to enable option completion.
+ *
+ * @note This macro can be used in two ways:
+ * @code #define MSH_CMD_EXPORT_ALIAS(command, alias, desc) @endcode
+ * or
+ * @code #define MSH_CMD_EXPORT_ALIAS(command, alias, desc, opt) @endcode
  */
-/* #define MSH_CMD_EXPORT_ALIAS(command, alias, desc) or
-   #define MSH_CMD_EXPORT_ALIAS(command, alias, desc, opt) */
 #define MSH_CMD_EXPORT_ALIAS(...)                                           \
     __MSH_GET_EXPORT_MACRO(__VA_ARGS__, _MSH_FUNCTION_EXPORT_CMD3_OPT,      \
             _MSH_FUNCTION_EXPORT_CMD3)(__VA_ARGS__)
@@ -179,9 +205,42 @@ typedef struct msh_cmd_opt
     const char      *des;
 } msh_cmd_opt_t;
 
+/* Command options declaration and definition macros */
+
+/**
+ * @brief Declares a static array of command options for a specific command.
+ *
+ * @param[in] command The command associated with these options.
+ */
+#ifdef _MSC_VER
+#define CMD_OPTIONS_STATEMENT(command) static struct msh_cmd_opt command##_msh_options[16];
+#else
 #define CMD_OPTIONS_STATEMENT(command) static struct msh_cmd_opt command##_msh_options[];
+#endif
+
+/**
+ * @brief Starts the definition of command options for a specific command.
+ *
+ * @param[in] command The command these options are associated with.
+ */
+#ifdef _MSC_VER
+#define CMD_OPTIONS_NODE_START(command) static struct msh_cmd_opt command##_msh_options[16] = {
+#else
 #define CMD_OPTIONS_NODE_START(command) static struct msh_cmd_opt command##_msh_options[] = {
+#endif
+
+/**
+ * @brief Defines a single command option.
+ *
+ * @param[in] _id Unique identifier for the option.
+ * @param[in] _name The name of the option.
+ * @param[in] _des Description of the option.
+ */
 #define CMD_OPTIONS_NODE(_id, _name, _des) {.id = _id, .name = #_name, .des = #_des},
+
+/**
+ * Marks the end of command options definition.
+ */
 #define CMD_OPTIONS_NODE_END    {0},};
 
 void msh_opt_list_dump(void *options);
@@ -207,9 +266,6 @@ extern struct finsh_syscall *_syscall_table_begin, *_syscall_table_end;
 #else
     #define FINSH_NEXT_SYSCALL(index)  index++
 #endif
-
-/* find out system call, which should be implemented in user program */
-struct finsh_syscall *finsh_syscall_lookup(const char *name);
 
 #if !defined(RT_USING_POSIX_STDIO) && defined(RT_USING_DEVICE)
 void finsh_set_device(const char *device_name);

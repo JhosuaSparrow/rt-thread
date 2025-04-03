@@ -25,12 +25,24 @@
 #include <rtatomic.h>
 #include <rtdevice.h>
 
+#ifndef ATTR_MODE_SET
+#define ATTR_MODE_SET	(1 << 6)
+#endif
+
 #ifndef ATTR_ATIME_SET
 #define ATTR_ATIME_SET	(1 << 7)
 #endif
 
 #ifndef ATTR_MTIME_SET
 #define ATTR_MTIME_SET	(1 << 8)
+#endif
+
+#ifndef ATTR_UID_SET
+#define ATTR_UID_SET	(1 << 9)
+#endif
+
+#ifndef ATTR_GID_SET
+#define ATTR_GID_SET	(1 << 10)
 #endif
 
 #ifndef AT_SYMLINK_NOFOLLOW
@@ -128,6 +140,9 @@ struct dfs_fdtable *dfs_fdtable_get(void);
 struct dfs_fdtable *dfs_fdtable_get_global(void);
 int dfs_dup(int oldfd, int startfd);
 #endif /* DFS_USING_POSIX */
+
+struct dfs_file* dfs_file_create(void);
+void dfs_file_destroy(struct dfs_file *file);
 
 #ifdef __cplusplus
 }

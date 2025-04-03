@@ -39,12 +39,14 @@
 
 #define F_CPU 120000000L /* CPU:120MHz */
 
-/* i2c2 : PD10-SDA PD10-SCL */
-#define RTDUINO_DEFAULT_IIC_BUS_NAME "i2c2"
+/* i2c0 : P203-SDA P202-SCL */
+#define RTDUINO_DEFAULT_IIC_BUS_NAME "i2c0"
 
 /* Serial4(uart4) : P205-TX  P206-RX */
 #define RTDUINO_SERIAL2_DEVICE_NAME "uart4"
 
-#define RTDUINO_DEFAULT_HWTIMER_DEVICE_NAME "timer2"
+/* soft spi1: P204-SS   P511-MISO   P512-MOSI */
+#define SS          D13
+#define RTDUINO_DEFAULT_SPI_BUS_NAME     "sspi1"
 
 #endif /* Pins_Arduino_h */

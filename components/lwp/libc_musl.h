@@ -11,6 +11,15 @@
 #ifndef __LIBC_MUSL_H__
 #define __LIBC_MUSL_H__
 
+/* from reboot.h */
+#define RB_AUTOBOOT     0x01234567
+#define RB_HALT_SYSTEM  0xcdef0123
+#define RB_ENABLE_CAD   0x89abcdef
+#define RB_DISABLE_CAD  0
+#define RB_POWER_OFF    0x4321fedc
+#define RB_SW_SUSPEND   0xd000fce2
+#define RB_KEXEC        0x45584543
+
 /* from internal/futex.h */
 
 #define FUTEX_WAIT        0
@@ -27,6 +36,22 @@
 #define FUTEX_PRIVATE 128
 
 #define FUTEX_CLOCK_REALTIME 256
+
+#define FUTEX_WAITERS		0x80000000
+#define FUTEX_OWNER_DIED	0x40000000
+#define FUTEX_TID_MASK		0x3fffffff
+
+struct robust_list
+{
+    struct robust_list *next;
+};
+
+struct robust_list_head
+{
+    struct robust_list list;
+    long futex_offset;
+    struct robust_list *list_op_pending;
+};
 
 /* for pmutex op */
 #define PMUTEX_INIT    0

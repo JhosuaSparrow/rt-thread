@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2023, RT-Thread Development Team
+ * Copyright (c) 2006-2025 RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -10,6 +10,7 @@
  * 2018-08-17     chenyong     multiple client support
  * 2021-03-17     Meco Man     fix a buf of leaking memory
  * 2021-07-14     Sszl         fix a buf of leaking memory
+ * 2025-01-02     dongly       support SERIAL_V2
  */
 
 #include <at.h>
@@ -19,13 +20,15 @@
 
 #define LOG_TAG              "at.clnt"
 #include <at_log.h>
-
 #ifdef AT_USING_CLIENT
 
 #define AT_RESP_END_OK                 "OK"
 #define AT_RESP_END_ERROR              "ERROR"
 #define AT_RESP_END_FAIL               "FAIL"
 #define AT_END_CR_LF                   "\r\n"
+#define AT_END_CR                      "\r"
+#define AT_END_LF                      "\n"
+#define AT_END_RAW                     ""
 
 static struct at_client at_client_table[AT_CLIENT_NUM_MAX] = { 0 };
 
@@ -34,6 +37,9 @@ extern rt_size_t at_utils_send(rt_device_t dev,
                                const void *buffer,
                                rt_size_t   size);
 extern rt_size_t at_vprintfln(rt_device_t device, char *send_buf, rt_size_t buf_size, const char *format, va_list args);
+extern rt_size_t at_vprintf(rt_device_t device, char *send_buf, rt_size_t buf_size, const char *format, va_list args);
+extern rt_size_t at_vprintfcr(rt_device_t device, char *send_buf, rt_size_t buf_size, const char *format, va_list args);
+extern rt_size_t at_vprintflf(rt_device_t device, char *send_buf, rt_size_t buf_size, const char *format, va_list args);
 extern void at_print_raw_cmd(const char *type, const char *cmd, rt_size_t size);
 
 /**
@@ -146,7 +152,6 @@ at_response_t at_resp_set_info(at_response_t resp, rt_size_t buf_size, rt_size_t
 const char *at_resp_get_line(at_response_t resp, rt_size_t resp_line)
 {
     char *resp_buf = resp->buf;
-    char *resp_line_buf = RT_NULL;
     rt_size_t line_num = 1;
 
     RT_ASSERT(resp);
@@ -161,9 +166,7 @@ const char *at_resp_get_line(at_response_t resp, rt_size_t resp_line)
     {
         if (resp_line == line_num)
         {
-            resp_line_buf = resp_buf;
-
-            return resp_line_buf;
+            return resp_buf;
         }
 
         resp_buf += strlen(resp_buf) + 1;
@@ -184,7 +187,6 @@ const char *at_resp_get_line(at_response_t resp, rt_size_t resp_line)
 const char *at_resp_get_line_by_kw(at_response_t resp, const char *keyword)
 {
     char *resp_buf = resp->buf;
-    char *resp_line_buf = RT_NULL;
     rt_size_t line_num = 1;
 
     RT_ASSERT(resp);
@@ -194,9 +196,7 @@ const char *at_resp_get_line_by_kw(at_response_t resp, const char *keyword)
     {
         if (strstr(resp_buf, keyword))
         {
-            resp_line_buf = resp_buf;
-
-            return resp_line_buf;
+            return resp_buf;
         }
 
         resp_buf += strlen(resp_buf) + 1;
@@ -332,17 +332,105 @@ int at_obj_exec_cmd(at_client_t client, at_response_t resp, const char *cmd_expr
             LOG_W("execute command (%.*s) timeout (%d ticks)!", client->last_cmd_len, client->send_buf, resp->timeout);
             client->resp_status = AT_RESP_TIMEOUT;
             result = -RT_ETIMEOUT;
-            goto __exit;
         }
-        if (client->resp_status != AT_RESP_OK)
+        else if (client->resp_status != AT_RESP_OK)
         {
             LOG_E("execute command (%.*s) failed!", client->last_cmd_len, client->send_buf);
             result = -RT_ERROR;
-            goto __exit;
         }
     }
 
-__exit:
+    client->resp = RT_NULL;
+
+    rt_mutex_release(client->lock);
+
+    return result;
+}
+
+/**
+ * Send commands through custom formatting to AT server and wait response.
+ *
+ * @param client current AT client object
+ * @param resp AT response object, using RT_NULL when you don't care response
+ * @param format formatting macro, it can be one of these values: AT_END_CR_LF, AT_END_RAW, AT_END_CR, AT_END_LF.
+ *               Behavior of AT_END_CR_LF is same as at_obj_exec_cmd, and it will add \r\n symnbol behind message.
+ *               AT_END_RAW means frame work won't modify anything of message. AT_END_CR will add \r for Carriage
+ *               Return. AT_END_LF means add \\n for Line Feed.
+ * @param cmd_expr AT commands expression
+ *
+ * @return 0 : success
+ *        -1 : response status error
+ *        -2 : wait timeout
+ *        -7 : enter AT CLI mode
+ */
+int at_obj_exec_cmd_format(at_client_t client, at_response_t resp, const char* format, const char *cmd_expr, ...)
+{
+    va_list args;
+    rt_err_t result = RT_EOK;
+
+    RT_ASSERT(cmd_expr);
+
+    if (client == RT_NULL)
+    {
+        LOG_E("input AT Client object is NULL, please create or get AT Client object!");
+        return -RT_ERROR;
+    }
+
+    /* check AT CLI mode */
+    if (client->status == AT_STATUS_CLI && resp)
+    {
+        return -RT_EBUSY;
+    }
+
+    rt_mutex_take(client->lock, RT_WAITING_FOREVER);
+
+    client->resp_status = AT_RESP_OK;
+
+    if (resp != RT_NULL)
+    {
+        resp->buf_len = 0;
+        resp->line_counts = 0;
+    }
+
+    client->resp = resp;
+    rt_sem_control(client->resp_notice, RT_IPC_CMD_RESET, RT_NULL);
+
+    va_start(args, cmd_expr);
+
+    if (strcmp(format, AT_END_CR_LF) == 0)
+    {
+        client->last_cmd_len = at_vprintfln(client->device, client->send_buf, client->send_bufsz, cmd_expr, args);
+    }
+    else if (strcmp(format, AT_END_RAW) == 0)
+    {
+        client->last_cmd_len = at_vprintf(client->device, client->send_buf, client->send_bufsz, cmd_expr, args);
+    }
+    else if (strcmp(format, AT_END_CR) == 0)
+    {
+        client->last_cmd_len = at_vprintfcr(client->device, client->send_buf, client->send_bufsz, cmd_expr, args);
+    }
+    else if (strcmp(format, AT_END_LF) == 0)
+    {
+        client->last_cmd_len = at_vprintflf(client->device, client->send_buf, client->send_bufsz, cmd_expr, args);
+    }
+
+    va_end(args);
+
+    if (resp != RT_NULL)
+    {
+        if (rt_sem_take(client->resp_notice, resp->timeout) != RT_EOK)
+        {
+            LOG_W("execute command (%.*s) timeout (%d ticks)!", client->last_cmd_len, client->send_buf, resp->timeout);
+            client->resp_status = AT_RESP_TIMEOUT;
+            result = -RT_ETIMEOUT;
+        }
+        else if (client->resp_status != AT_RESP_OK)
+        {
+            LOG_E("execute command (%.*s) failed!", client->last_cmd_len, client->send_buf);
+            result = -RT_ERROR;
+        }
+    }
+
     client->resp = RT_NULL;
 
     rt_mutex_release(client->lock);
@@ -401,9 +489,7 @@ int at_client_obj_wait_connect(at_client_t client, rt_uint32_t timeout)
         resp->line_counts = 0;
         at_utils_send(client->device, 0, "AT\r\n", 4);
 
-        if (rt_sem_take(client->resp_notice, resp->timeout) != RT_EOK)
-            continue;
-        else
+        if (rt_sem_take(client->resp_notice, resp->timeout) == RT_EOK)
             break;
     }
 
@@ -494,25 +580,23 @@ rt_size_t at_client_obj_recv(at_client_t client, char *buf, rt_size_t size, rt_i
         return 0;
     }
 
-    while (1)
+    while (size)
     {
         rt_size_t read_len;
 
         rt_sem_control(client->rx_notice, RT_IPC_CMD_RESET, RT_NULL);
 
         read_len = rt_device_read(client->device, 0, buf + len, size);
-        if(read_len > 0)
+        if (read_len > 0)
         {
             len += read_len;
             size -= read_len;
-            if(size == 0)
-                break;
-
-            continue;
         }
-
-        if(rt_sem_take(client->rx_notice, rt_tick_from_millisecond(timeout)) != RT_EOK)
-            break;
+        else
+        {
+            if (rt_sem_take(client->rx_notice, rt_tick_from_millisecond(timeout)) != RT_EOK)
+                break;
+        }
     }
 
 #ifdef AT_PRINT_RAW_CMD
@@ -676,7 +760,6 @@ static const struct at_urc *get_urc_obj(at_client_t client)
 
 static int at_recv_readline(at_client_t client)
 {
-    rt_size_t read_len = 0;
     char ch = 0, last_ch = 0;
     rt_bool_t is_full = RT_FALSE;
 
@@ -687,10 +770,9 @@ static int at_recv_readline(at_client_t client)
     {
         at_client_getchar(client, &ch, RT_WAITING_FOREVER);
 
-        if (read_len < client->recv_bufsz)
+        if (client->recv_line_len < client->recv_bufsz)
         {
-            client->recv_line_buf[read_len++] = ch;
-            client->recv_line_len = read_len;
+            client->recv_line_buf[client->recv_line_len++] = ch;
         }
         else
         {
@@ -714,10 +796,10 @@ static int at_recv_readline(at_client_t client)
     }
 
 #ifdef AT_PRINT_RAW_CMD
-    at_print_raw_cmd("recvline", client->recv_line_buf, read_len);
+    at_print_raw_cmd("recvline", client->recv_line_buf, client->recv_line_len);
 #endif
 
-    return read_len;
+    return client->recv_line_len;
 }
 
 static void client_parser(at_client_t client)
@@ -789,7 +871,7 @@ static void client_parser(at_client_t client)
             }
             else
             {
-//                log_d("unrecognized line: %.*s", client->recv_line_len, client->recv_line_buf);
+/*                log_d("unrecognized line: %.*s", client->recv_line_len, client->recv_line_buf);*/
             }
         }
     }
@@ -882,7 +964,6 @@ static int at_client_para_init(at_client_t client)
     if (client->parser == RT_NULL)
     {
         result = -RT_ENOMEM;
-        goto __exit;
     }
 
 __exit:
@@ -903,14 +984,14 @@ __exit:
             rt_sem_delete(client->resp_notice);
         }
 
-        if (client->device)
-        {
-            rt_device_close(client->device);
-        }
-
         if (client->recv_line_buf)
         {
             rt_free(client->recv_line_buf);
+        }
+
+        if (client->send_buf)
+        {
+            rt_free(client->send_buf);
         }
 
         rt_memset(client, 0x00, sizeof(struct at_client));
@@ -928,6 +1009,7 @@ __exit:
  *
  * @param dev_name AT client device name
  * @param recv_bufsz the maximum number of receive buffer length
+ * @param send_bufsz the maximum number of send command length
  *
  * @return 0 : initialize success
  *        -1 : initialize failed
@@ -974,6 +1056,11 @@ int at_client_init(const char *dev_name, rt_size_t recv_bufsz, rt_size_t send_bu
     {
         RT_ASSERT(client->device->type == RT_Device_Class_Char);
 
+        rt_device_set_rx_indicate(client->device, at_client_rx_ind);
+
+#ifdef RT_USING_SERIAL_V2
+        open_result = rt_device_open(client->device, RT_DEVICE_OFLAG_RDWR | RT_DEVICE_FLAG_RX_NON_BLOCKING);
+#else
         /* using DMA mode first */
         open_result = rt_device_open(client->device, RT_DEVICE_OFLAG_RDWR | RT_DEVICE_FLAG_DMA_RX);
         /* using interrupt mode when DMA mode not supported */
@@ -981,15 +1068,13 @@ int at_client_init(const char *dev_name, rt_size_t recv_bufsz, rt_size_t send_bu
         {
             open_result = rt_device_open(client->device, RT_DEVICE_OFLAG_RDWR | RT_DEVICE_FLAG_INT_RX);
         }
+#endif /* RT_USING_SERIAL_V2 */
         RT_ASSERT(open_result == RT_EOK);
-
-        rt_device_set_rx_indicate(client->device, at_client_rx_ind);
     }
     else
     {
         LOG_E("AT client initialize failed! Not find the device(%s).", dev_name);
         result = -RT_ERROR;
-        goto __exit;
     }
 
 __exit:

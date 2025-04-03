@@ -29,37 +29,38 @@
 /* cache */
 void FDriverDCacheRangeFlush(uintptr_t adr, size_t len)
 {
-    __asm_flush_dcache_range(adr, len);
+    rt_hw_cpu_dcache_clean((void *)adr, len);
 }
 
 void FDriverDCacheRangeInvalidate(uintptr_t adr, size_t len)
 {
-    rt_hw_cpu_dcache_invalidate(adr, len);
+    rt_hw_cpu_dcache_invalidate((void *)adr, len);
 }
 
 void FDriverICacheRangeInvalidate(uintptr_t adr, size_t len)
 {
     __asm_invalidate_icache_all();
 }
+
 #else
 #include "rthw.h"
 /* cache */
 void FDriverDCacheRangeFlush(uintptr_t adr, size_t len)
 {
-    rt_hw_cpu_dcache_ops(RT_HW_CACHE_FLUSH, adr, len);
+    rt_hw_cpu_dcache_ops(RT_HW_CACHE_FLUSH, (void *)adr, len);
 }
 
 void FDriverDCacheRangeInvalidate(uintptr_t adr, size_t len)
 {
-    rt_hw_cpu_dcache_ops(RT_HW_CACHE_INVALIDATE, adr, len);
+    rt_hw_cpu_dcache_ops(RT_HW_CACHE_INVALIDATE, (void *)adr, len);
 }
 
 void FDriverICacheRangeInvalidate(uintptr_t adr, size_t len)
 {
-    rt_hw_cpu_icache_ops(RT_HW_CACHE_INVALIDATE, adr, len);
+    rt_hw_cpu_icache_ops(RT_HW_CACHE_INVALIDATE, (void *)adr, len);
 }
-#endif
 
+#endif
 
 /* time delay */
 
@@ -68,13 +69,13 @@ void FDriverUdelay(u32 usec)
     rt_thread_delay(usec);
 }
 
-void FDriverMdelay(u32 msec)
-{
-    rt_thread_mdelay(msec);
-}
-
 void FDriverSdelay(u32 sec)
 {
     u32 msec = sec * 1000;
+    rt_thread_mdelay(msec);
+}
+
+void FDriverMdelay(u32 msec)
+{
     rt_thread_mdelay(msec);
 }

@@ -32,7 +32,6 @@
 extern "C" {
 #endif
 
-typedef long suseconds_t;       /* microseconds (signed) */
 typedef uint32_t id_t;          /* may contain pid, uid or gid */
 
 /*
@@ -108,9 +107,14 @@ sysret_t sys_log(const char* log, int size);
 
 #ifdef ARCH_MM_MMU
 sysret_t sys_futex(int *uaddr, int op, int val, const struct timespec *timeout, int *uaddr2, int val3);
-sysret_t sys_pmutex(void *umutex, int op, void *arg);
 sysret_t sys_cacheflush(void *addr, int len, int cache);
 #endif /* ARCH_MM_MMU */
+
+sysret_t sys_setsid(void);
+sysret_t sys_getsid(pid_t pid);
+sysret_t sys_setpgid(pid_t pid, pid_t pgid);
+sysret_t sys_getpgid(pid_t pid);
+
 
 #ifdef __cplusplus
 }

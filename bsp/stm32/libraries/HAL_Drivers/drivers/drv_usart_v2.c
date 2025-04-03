@@ -89,18 +89,23 @@ static struct stm32_uart_config uart_config[] =
 #ifdef BSP_USING_UART4
     UART4_CONFIG,
 #endif
+
 #ifdef BSP_USING_UART5
     UART5_CONFIG,
 #endif
+
 #ifdef BSP_USING_UART6
     UART6_CONFIG,
 #endif
+
 #ifdef BSP_USING_UART7
     UART7_CONFIG,
 #endif
+
 #ifdef BSP_USING_UART8
     UART8_CONFIG,
 #endif
+
 #ifdef BSP_USING_LPUART1
     LPUART1_CONFIG,
 #endif
@@ -857,6 +862,64 @@ void LPUART1_DMA_RX_IRQHandler(void)
 }
 #endif /* defined(RT_SERIAL_USING_DMA) && defined(BSP_LPUART1_RX_USING_DMA) */
 #endif /* BSP_USING_LPUART1*/
+
+#if defined(SOC_SERIES_STM32G0)
+#if defined(BSP_USING_UART2)
+#if defined(STM32G0B1xx) || defined(STM32G0C1xx)
+void USART2_LPUART2_IRQHandler(void)
+{
+    USART2_IRQHandler();
+}
+#endif /* defined(STM32G0B1xx) || defined(STM32G0C1xx) */
+#endif /* defined(BSP_USING_UART2) */
+#if defined(BSP_USING_UART3) || defined(BSP_USING_UART4) || defined(BSP_USING_UART5) || defined(BSP_USING_UART6) \
+    || defined(BSP_USING_LPUART1)
+#if defined(STM32G070xx)
+void USART3_4_IRQHandler(void)
+#elif defined(STM32G071xx) || defined(STM32G081xx)
+void USART3_4_LPUART1_IRQHandler(void)
+#elif defined(STM32G0B0xx)
+void USART3_4_5_6_IRQHandler(void)
+#elif defined(STM32G0B1xx) || defined(STM32G0C1xx)
+void USART3_4_5_6_LPUART1_IRQHandler(void)
+#endif /* defined(STM32G070xx) */
+{
+#if defined(BSP_USING_UART3)
+    USART3_IRQHandler();
+#endif
+#if defined(BSP_USING_UART4)
+    UART4_IRQHandler();
+#endif
+#if defined(BSP_USING_UART5)
+    UART5_IRQHandler();
+#endif
+#if defined(BSP_USING_UART6)
+    USART6_IRQHandler();
+#endif
+#if defined(BSP_USING_LPUART1)
+    LPUART1_IRQHandler();
+#endif
+}
+#endif /* defined(BSP_USING_UART3) || defined(BSP_USING_UART4) || defined(BSP_USING_UART5) || defined(BSP_USING_UART6) */
+#if defined(RT_SERIAL_USING_DMA)
+void UART_DMA_RX_TX_IRQHandler(void)
+{
+#if defined(BSP_USING_UART1) && defined(BSP_UART1_TX_USING_DMA)
+    UART1_DMA_TX_IRQHandler();
+#endif
+#if defined(BSP_USING_UART1) && defined(BSP_UART1_RX_USING_DMA)
+    UART1_DMA_RX_IRQHandler();
+#endif
+#if defined(BSP_USING_UART2) && defined(BSP_UART2_TX_USING_DMA)
+    UART2_DMA_TX_IRQHandler();
+#endif
+#if defined(BSP_USING_UART2) && defined(BSP_UART2_RX_USING_DMA)
+    UART2_DMA_RX_IRQHandler();
+#endif
+}
+#endif /* defined(RT_SERIAL_USING_DMA) */
+#endif /* defined(SOC_SERIES_STM32G0) */
+
 static void stm32_uart_get_config(void)
 {
     struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;
@@ -1019,6 +1082,20 @@ static void stm32_uart_get_config(void)
     uart_config[UART8_INDEX].dma_tx = &uart8_dma_tx;
 #endif
 #endif
+
+#ifdef BSP_USING_LPUART1
+    uart_obj[LPUART1_INDEX].serial.config = config;
+    uart_obj[LPUART1_INDEX].uart_dma_flag = 0;
+
+    uart_obj[LPUART1_INDEX].serial.config.rx_bufsz = BSP_LPUART1_RX_BUFSIZE;
+    uart_obj[LPUART1_INDEX].serial.config.tx_bufsz = BSP_LPUART1_TX_BUFSIZE;
+
+#ifdef BSP_LPUART1_RX_USING_DMA
+    uart_obj[LPUART1_INDEX].uart_dma_flag |= RT_DEVICE_FLAG_DMA_RX;
+    static struct dma_config lpuart1_dma_rx = LPUART1_DMA_CONFIG;
+    uart_config[LPUART1_INDEX].dma_rx = &lpuart1_dma_rx;
+#endif
+#endif
 }
 
 #ifdef RT_SERIAL_USING_DMA
@@ -1052,7 +1129,7 @@ static void stm32_dma_config(struct rt_serial_device *serial, rt_ubase_t flag)
         /* enable DMA clock && Delay after an RCC peripheral clock enabling*/
         SET_BIT(RCC->AHBENR, dma_config->dma_rcc);
         tmpreg = READ_BIT(RCC->AHBENR, dma_config->dma_rcc);
-#elif defined(SOC_SERIES_STM32F4) || defined(SOC_SERIES_STM32F7) || defined(SOC_SERIES_STM32L4) || defined(SOC_SERIES_STM32WL) \
+#elif defined(SOC_SERIES_STM32F2) || defined(SOC_SERIES_STM32F4) || defined(SOC_SERIES_STM32F7) || defined(SOC_SERIES_STM32L4) || defined(SOC_SERIES_STM32WL) \
     || defined(SOC_SERIES_STM32G4)|| defined(SOC_SERIES_STM32H7) || defined(SOC_SERIES_STM32WB)
         /* enable DMA clock && Delay after an RCC peripheral clock enabling*/
         SET_BIT(RCC->AHB1ENR, dma_config->dma_rcc);
@@ -1084,7 +1161,7 @@ static void stm32_dma_config(struct rt_serial_device *serial, rt_ubase_t flag)
 
 #if defined(SOC_SERIES_STM32F1) || defined(SOC_SERIES_STM32F0) || defined(SOC_SERIES_STM32L0)
     DMA_Handle->Instance                 = dma_config->Instance;
-#elif defined(SOC_SERIES_STM32F4) || defined(SOC_SERIES_STM32F7)
+#elif defined(SOC_SERIES_STM32F2) || defined(SOC_SERIES_STM32F4) || defined(SOC_SERIES_STM32F7)
     DMA_Handle->Instance                 = dma_config->Instance;
     DMA_Handle->Init.Channel             = dma_config->channel;
 #elif defined(SOC_SERIES_STM32L4) || defined(SOC_SERIES_STM32WL) || defined(SOC_SERIES_STM32G0) || defined(SOC_SERIES_STM32G4) || defined(SOC_SERIES_STM32WB)\
@@ -1109,7 +1186,7 @@ static void stm32_dma_config(struct rt_serial_device *serial, rt_ubase_t flag)
     }
 
     DMA_Handle->Init.Priority            = DMA_PRIORITY_MEDIUM;
-#if defined(SOC_SERIES_STM32F4) || defined(SOC_SERIES_STM32F7) || defined(SOC_SERIES_STM32H7) || defined(SOC_SERIES_STM32MP1)
+#if defined(SOC_SERIES_STM32F2) || defined(SOC_SERIES_STM32F4) || defined(SOC_SERIES_STM32F7) || defined(SOC_SERIES_STM32H7) || defined(SOC_SERIES_STM32MP1)
     DMA_Handle->Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
 #endif
     if (HAL_DMA_DeInit(DMA_Handle) != HAL_OK)
@@ -1238,7 +1315,7 @@ int rt_hw_usart_init(void)
     rt_size_t obj_num = sizeof(uart_obj) / sizeof(struct stm32_uart);
 
     stm32_uart_get_config();
-    for (int i = 0; i < obj_num; i++)
+    for (rt_uint32_t i = 0; i < obj_num; i++)
     {
         /* init UART object */
         uart_obj[i].config = &uart_config[i];

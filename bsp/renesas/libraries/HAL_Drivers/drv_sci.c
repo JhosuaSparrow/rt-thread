@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2023, RT-Thread Development Team
+ * Copyright (c) 2006-2025, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,6 +21,15 @@
     #define DBG_LVL               DBG_INFO
 #endif /* DRV_DEBUG */
 #include <rtdbg.h>
+
+#ifdef R_SCI_B_SPI_H
+    #define R_SCI_SPI_Write             R_SCI_B_SPI_Write
+    #define R_SCI_SPI_Read              R_SCI_B_SPI_Read
+    #define R_SCI_SPI_WriteRead         R_SCI_B_SPI_WriteRead
+    #define R_SCI_SPI_Open              R_SCI_B_SPI_Open
+    #define R_SCI_SPI_Close             R_SCI_B_SPI_Close
+    #define R_SCI_SPI_CallbackSet       R_SCI_B_SPI_CallbackSet
+#endif
 
 enum
 {
@@ -71,7 +80,7 @@ struct ra_sci_param
 #ifdef RT_USING_SPI
     rt_weak const struct rt_spi_ops            sci_ops_spi;
 #endif
-#ifdef RT_USING_UART
+#ifdef RT_USING_SERIAL
     rt_weak const struct rt_uart_ops           sci_ops_uart;
 #endif
 
@@ -92,7 +101,7 @@ struct ra_sci_object
             struct rt_i2c_bus_device    ibus;
         };
 #endif
-#ifdef RT_USING_UART
+#ifdef RT_USING_SERIAL
         struct
         {
             struct rt_serial_device     ubus;
@@ -103,23 +112,22 @@ struct ra_sci_object
     struct rt_event event;
 };
 
-#ifndef BIT
-    #define BIT(idx)            (1ul << (idx))
-#endif
-
-#ifndef BITS
-    #define BITS(b,e)                   ((((uint32_t)-1)<<(b))&(((uint32_t)-1)>>(31-(e))))
-#endif
-
 #define _TO_STR(_a)                 #_a
 #define CONCAT3STR(_a,_b,_c)        _TO_STR(_a##_b##_c)
 
-#define RA_SCI_EVENT_ABORTED        BIT(0)
-#define RA_SCI_EVENT_RX_COMPLETE    BIT(1)
-#define RA_SCI_EVENT_TX_COMPLETE    BIT(2)
-#define RA_SCI_EVENT_ERROR          BIT(3)
-#define RA_SCI_EVENT_ALL            BITS(0,3)
+#define RA_SCI_EVENT_ABORTED        1
+#define RA_SCI_EVENT_RX_COMPLETE    2
+#define RA_SCI_EVENT_TX_COMPLETE    4
+#define RA_SCI_EVENT_ERROR          8
+#define RA_SCI_EVENT_ALL            15
 
+/**
+ * Bus name format: sci[x][y], where x=0~9 and y=s/i/u
+ * Example:
+ * - sci_spi:  sci0s
+ * - sci_i2c:  sci0i
+ * - sci_uart: sci0u
+ */
 #define RA_SCI_HANDLE_ITEM(idx,type,id)    {.bus_name=CONCAT3STR(sci,idx,id),.sci_ctrl=&g_sci##idx##_ctrl,.sci_cfg=&g_sci##idx##_cfg,.ops=&sci_ops_##type}
 
 const static struct ra_sci_param sci_param[] =
@@ -225,7 +233,7 @@ const static struct ra_sci_param sci_param[] =
 #endif
 };
 
-static struct ra_sci_object sci_obj[RA_SCI_INDEX_MAX] = {0};
+static struct ra_sci_object sci_obj[RA_SCI_INDEX_MAX];
 rt_used static rt_err_t ra_wait_complete(struct ra_sci_object *obj)
 {
     rt_uint32_t event = 0;
@@ -350,7 +358,11 @@ static int ra_uart_putc(struct rt_serial_device *serial, char c)
     sci_uart_instance_ctrl_t *p_ctrl = (sci_uart_instance_ctrl_t *)param->sci_ctrl;
 
     p_ctrl->p_reg->TDR = c;
+#ifdef SOC_SERIES_R9A07G0
+    while ((p_ctrl->p_reg->CSR_b.TEND) == 0);
+#else
     while ((p_ctrl->p_reg->SSR_b.TEND) == 0);
+#endif
 
     return RT_EOK;
 }
@@ -625,6 +637,7 @@ static rt_err_t ra_write_read_message(struct rt_spi_device *device, struct rt_sp
         LOG_E("%s write and read failed. %d", param->bus_name, err);
         return -RT_ERROR;
     }
+
     /* Wait for SPI_EVENT_TRANSFER_COMPLETE callback event. */
     ra_wait_complete(obj);
     return message->length;
@@ -648,13 +661,23 @@ static rt_err_t ra_hw_spi_configure(struct rt_spi_device *device,
     configuration->data_width = configuration->data_width / 8;
     obj->spi_cfg = configuration;
 
-    sci_spi_extended_cfg_t *cfg_ext = (sci_spi_extended_cfg_t *)cfg->p_extend;
+#ifdef R_SCI_B_SPI_H
+    sci_b_spi_extended_cfg_t spi_cfg = *(sci_b_spi_extended_cfg_t *)cfg->p_extend;
+#else
+    sci_spi_extended_cfg_t *spi_cfg = (sci_spi_extended_cfg_t *)cfg->p_extend;
+#endif
 
     /**< Configure Select Line */
     rt_pin_write(device->cs_pin, PIN_HIGH);
 
     /**< config bitrate */
-    R_SCI_SPI_CalculateBitrate(obj->spi_cfg->max_hz, &cfg_ext->clk_div, false);
+#ifdef R_SCI_B_SPI_H
+    R_SCI_B_SPI_CalculateBitrate(obj->spi_cfg->max_hz, SCI_B_SPI_SOURCE_CLOCK_PCLK, &spi_cfg.clk_div);
+#elif defined(SOC_SERIES_R9A07G0)
+    R_SCI_SPI_CalculateBitrate(obj->spi_cfg->max_hz, SCI_SPI_CLOCK_SOURCE_PCLKM, false);
+#else
+    R_SCI_SPI_CalculateBitrate(obj->spi_cfg->max_hz, &spi_cfg->clk_div, false);
+#endif
 
     /**< init */
     err = R_SCI_SPI_Open((spi_ctrl_t *)param->sci_ctrl, cfg);
@@ -734,6 +757,7 @@ const struct rt_spi_ops sci_ops_spi =
 
 static int ra_hw_sci_init(void)
 {
+    int bufsz_idx = 0;
     for (rt_uint8_t idx = 0; idx < RA_SCI_INDEX_MAX; idx++)
     {
         struct ra_sci_object *obj = &sci_obj[idx];
@@ -863,7 +887,7 @@ rt_weak int rt_hw_usart_init(void)
   * Attach the spi device to SPI bus, this function must be used after initialization.
   */
 #ifdef BSP_USING_SCIn_SPI
-rt_err_t drv_sci_spi_device_attach(const char *bus_name, const char *device_name, rt_base_t cs_pin)
+rt_err_t rt_hw_sci_spi_device_attach(const char *bus_name, const char *device_name, rt_base_t cs_pin)
 {
     RT_ASSERT(bus_name != RT_NULL);
     RT_ASSERT(device_name != RT_NULL);

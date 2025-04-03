@@ -17,10 +17,12 @@
 #include "rtconfig.h"
 #include <rthw.h>
 #include <rtthread.h>
+#include <phytium_cpu.h>
 
 #include <mmu.h>
 #include <mm_aspace.h> /* TODO: why need application space when RT_SMART off */
 #include <mm_page.h>
+#include "phytium_interrupt.h"
 
 #ifdef RT_USING_SMART
     #include <page.h>
@@ -50,6 +52,7 @@ extern FIOPadCtrl iopad_ctrl;
 /* mmu config */
 extern struct mem_desc platform_mem_desc[];
 extern const rt_uint32_t platform_mem_desc_size;
+rt_uint64_t rt_cpu_mpidr_table[RT_CPUS_NR];
 
 void idle_wfi(void)
 {
@@ -146,7 +149,7 @@ void rt_hw_board_aarch64_init(void)
     /* 1. init rt_kernel_space table  (aspace.start = KERNEL_VADDR_START ,  aspace.size = ), 2. init io map range (rt_ioremap_start \ rt_ioremap_size) 3.   */
     rt_hw_mmu_map_init(&rt_kernel_space, (void *)0xfffffffff0000000, 0x10000000, MMUTable, PV_OFFSET);
 #else
-    rt_hw_mmu_map_init(&rt_kernel_space, (void *)0x80000000, 0x10000000, MMUTable, 0);
+    rt_hw_mmu_map_init(&rt_kernel_space, (void *)0xffffd0000000, 0x10000000, MMUTable, 0);
 #endif
     rt_page_init(init_page_region);
 
@@ -157,7 +160,7 @@ void rt_hw_board_aarch64_init(void)
     rt_system_heap_init((void *)HEAP_BEGIN, (void *)HEAP_END);
 #endif
 
-    rt_hw_interrupt_init();
+    phytium_interrupt_init();
 
     rt_hw_gtimer_init();
 
@@ -189,27 +192,29 @@ void rt_hw_board_aarch64_init(void)
 }
 #else
 
+#if defined(TARGET_E2000D)
+#define FT_GIC_REDISTRUBUTIOR_OFFSET 2
+#endif
+
 void rt_hw_board_aarch32_init(void)
 {
 
 #if defined(RT_USING_SMART)
-
+    rt_uint32_t mmutable_p = 0;
     /* set io map range is 0xf0000000 ~ 0x10000000  , Memory Protection start address is 0xf0000000  - rt_mpr_size */
     rt_hw_mmu_map_init(&rt_kernel_space, (void *)0xf0000000, 0x10000000, MMUTable, PV_OFFSET);
-
+    rt_hw_init_mmu_table(platform_mem_desc,platform_mem_desc_size) ;
+    mmutable_p = (rt_uint32_t)MMUTable + (rt_uint32_t)PV_OFFSET ;
+    rt_hw_mmu_switch((void*)mmutable_p) ;
     rt_page_init(init_page_region);
-
     /* rt_kernel_space 在start_gcc.S 中被初始化，此函数将iomap 空间放置在kernel space 上 */
     rt_hw_mmu_ioremap_init(&rt_kernel_space, (void *)0xf0000000, 0x10000000);
-    /*  */
     arch_kuser_init(&rt_kernel_space, (void *)0xffff0000);
 #else
-    /*
-       map kernel space memory (totally 1GB = 0x10000000), pv_offset = 0 if not RT_SMART:
-         0x80000000 ~ 0x80100000: kernel stack
-         0x80100000 ~ __bss_end: kernel code and data
-    */
+
     rt_hw_mmu_map_init(&rt_kernel_space, (void *)0x80000000, 0x10000000, MMUTable, 0);
+    rt_hw_init_mmu_table(platform_mem_desc,platform_mem_desc_size) ;
+    rt_hw_mmu_init();
     rt_hw_mmu_ioremap_init(&rt_kernel_space, (void *)0x80000000, 0x10000000);
 #endif
 
@@ -226,50 +231,12 @@ void rt_hw_board_aarch32_init(void)
 #if defined(FT_GIC_REDISTRUBUTIOR_OFFSET)
     cpu_offset = FT_GIC_REDISTRUBUTIOR_OFFSET ;
 #endif
-    rt_uint32_t redist_addr = 0;
-
     FEarlyUartProbe();
 
     FIOMuxInit();
 
-#if defined(RT_USING_SMART)
-    redist_addr = (uint32_t)rt_ioremap(GICV3_RD_BASE_ADDR, 4 * 128 * 1024);
-#else
-    redist_addr = GICV3_RD_BASE_ADDR;
-#endif
-
-    arm_gic_redist_address_set(0, redist_addr + (cpu_id + cpu_offset) * GICV3_RD_OFFSET, rt_hw_cpu_id());
-
-#if defined(TARGET_E2000Q) || defined(TARGET_PHYTIUMPI)
-
-#if RT_CPUS_NR == 2
-    arm_gic_redist_address_set(0, redist_addr + 3 * GICV3_RD_OFFSET, 1);
-#elif RT_CPUS_NR == 3
-    arm_gic_redist_address_set(0, redist_addr + 3 * GICV3_RD_OFFSET, 1);
-    arm_gic_redist_address_set(0, redist_addr, 2);
-#elif RT_CPUS_NR == 4
-    arm_gic_redist_address_set(0, redist_addr + 3 * GICV3_RD_OFFSET, 1);
-    arm_gic_redist_address_set(0, redist_addr, 2);
-    arm_gic_redist_address_set(0, redist_addr + GICV3_RD_OFFSET, 3);
-#endif
-
-#else
-
-#if RT_CPUS_NR == 2
-    arm_gic_redist_address_set(0, redist_addr + (1 + cpu_offset) * GICV3_RD_OFFSET, 1);
-#elif RT_CPUS_NR == 3
-    arm_gic_redist_address_set(0, redist_addr + (1 + cpu_offset) * GICV3_RD_OFFSET, 1);
-    arm_gic_redist_address_set(0, redist_addr + (2 + cpu_offset) * GICV3_RD_OFFSET, 2);
-#elif RT_CPUS_NR == 4
-    arm_gic_redist_address_set(0, redist_addr + (1 + cpu_offset) * GICV3_RD_OFFSET, 1);
-    arm_gic_redist_address_set(0, redist_addr + (2 + cpu_offset) * GICV3_RD_OFFSET, 2);
-    arm_gic_redist_address_set(0, redist_addr + (3 + cpu_offset) * GICV3_RD_OFFSET, 3);
-#endif
-
-#endif
-
+    arm_gic_redist_address_set(0, platform_get_gic_redist_base(), rt_hw_cpu_id());
     rt_hw_interrupt_init();
-
 
     /* compoent init */
 #ifdef RT_USING_COMPONENTS_INIT

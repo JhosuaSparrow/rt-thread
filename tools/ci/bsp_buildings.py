@@ -1,7 +1,8 @@
 import os
 import shutil
+import re
 import multiprocessing
-
+import yaml
 
 def add_summary(text):
     """
@@ -17,6 +18,7 @@ def run_cmd(cmd, output_info=True):
     print('\033[1;32m' + cmd + '\033[0m')
 
     output_str_list = []
+    res = 0
 
     if output_info:
         res = os.system(cmd + " > output.txt 2>&1")
@@ -34,7 +36,7 @@ def run_cmd(cmd, output_info=True):
     return output_str_list, res
 
 
-def build_bsp(bsp):
+def build_bsp(bsp, scons_args='',name='default'):
     """
     build bsp.
 
@@ -46,7 +48,7 @@ def build_bsp(bsp):
     pkgs --list
 
     cd {rtt_root}
-    scons -C bsp/{bsp} -j{nproc}
+    scons -C bsp/{bsp} -j{nproc} {scons_args}
 
     cd {rtt_root}/bsp/{bsp}
     scons -c > /dev/null
@@ -55,26 +57,33 @@ def build_bsp(bsp):
     """
     success = True
     os.chdir(rtt_root)
+    os.makedirs(f'{rtt_root}/output/bsp/{bsp}', exist_ok=True)
     if os.path.exists(f"{rtt_root}/bsp/{bsp}/Kconfig"):
         os.chdir(rtt_root)
         run_cmd(f'scons -C bsp/{bsp} --pyconfig-silent', output_info=False)
 
         os.chdir(f'{rtt_root}/bsp/{bsp}')
-        run_cmd('pkgs --update', output_info=False)
+        run_cmd('pkgs --update-force', output_info=False)
         run_cmd('pkgs --list')
 
         nproc = multiprocessing.cpu_count()
         os.chdir(rtt_root)
-        __, res = run_cmd(f'scons -C bsp/{bsp} -j{nproc}', output_info=False)
+        cmd = f'scons -C bsp/{bsp} -j{nproc} {scons_args}' # --debug=time for debug time
+        __, res = run_cmd(cmd, output_info=True)
 
         if res != 0:
             success = False
+        else:
+            #拷贝当前的文件夹下面的所有以elf结尾的文件拷贝到rt-thread/output文件夹下
+            import glob
+            # 拷贝编译生成的文件到output目录,文件拓展为 elf,bin,hex
+            for file_type in ['*.elf', '*.bin', '*.hex']:
+                files = glob.glob(f'{rtt_root}/bsp/{bsp}/{file_type}')
+                for file in files:
+                    shutil.copy(file, f'{rtt_root}/output/bsp/{bsp}/{name.replace("/", "_")}.{file_type[2:]}')
 
     os.chdir(f'{rtt_root}/bsp/{bsp}')
     run_cmd('scons -c', output_info=False)
-
-    pkg_dir = os.path.join(rtt_root, 'bsp', bsp, 'packages')
-    shutil.rmtree(pkg_dir, ignore_errors=True)
 
     return success
 
@@ -88,6 +97,35 @@ def append_file(source_file, destination_file):
             for line in source:
                 destination.write(line)
 
+def check_scons_args(file_path):
+    args = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            match = re.search(r'#\s*scons:\s*(.*)', line)
+            if match:
+                args.append(match.group(1).strip())
+    return ' '.join(args)
+
+def get_details_and_dependencies(details, projects, seen=None):
+    if seen is None:
+        seen = set()
+    detail_list = []
+    if details is not None:
+        for dep in details:
+            if dep not in seen:
+                dep_details=projects.get(dep)
+                seen.add(dep)
+                if dep_details is not None:
+                    if dep_details.get('depends') is not None:
+                        detail_temp=get_details_and_dependencies(dep_details.get('depends'), projects, seen)
+                        for line in detail_temp:
+                            detail_list.append(line)
+                    if dep_details.get('kconfig') is not None:
+                        for line in dep_details.get('kconfig'):
+                            detail_list.append(line)
+            else:
+                print(f"::error::There are some problems with attachconfig depend: {dep}");
+    return detail_list
 
 def build_bsp_attachconfig(bsp, attach_file):
     """
@@ -111,7 +149,9 @@ def build_bsp_attachconfig(bsp, attach_file):
 
     append_file(attach_path, config_file)
 
-    res = build_bsp(bsp)
+    scons_args = check_scons_args(attach_path)
+
+    res = build_bsp(bsp, scons_args,name=attach_file)
 
     shutil.copyfile(config_bacakup, config_file)
     os.remove(config_bacakup)
@@ -145,13 +185,67 @@ if __name__ == "__main__":
             add_summary(f'- ✅ build {bsp} success.')
         print("::endgroup::")
 
+        yml_files_content = []
+        directory = os.path.join(rtt_root, 'bsp', bsp, '.ci/attachconfig')
+        if os.path.exists(directory):
+            for root, dirs, files in os.walk(directory):
+                for filename in files:
+                    if filename.endswith('attachconfig.yml'):
+                        file_path = os.path.join(root, filename)
+                        if os.path.exists(file_path):
+                            try:
+                                with open(file_path, 'r') as file:
+                                    content = yaml.safe_load(file)
+                                    if content is None:
+                                        continue
+                                    yml_files_content.append(content)
+                            except yaml.YAMLError as e:
+                                print(f"::error::Error parsing YAML file: {e}")
+                                continue
+                            except Exception as e:
+                                print(f"::error::Error reading file: {e}")
+                                continue
+        
+        config_file = os.path.join(rtt_root, 'bsp', bsp, '.config')
+
+        for projects in yml_files_content:
+            for name, details in projects.items():
+                count += 1
+                config_bacakup = config_file+'.origin'
+                shutil.copyfile(config_file, config_bacakup)
+                with open(config_file, 'a') as destination:
+                    if details.get("kconfig") is None:
+                        continue
+                    if(projects.get(name) is not None):
+                        detail_list=get_details_and_dependencies([name],projects)
+                        for line in detail_list:
+                            destination.write(line + '\n')
+                scons_arg=[]
+                if details.get('scons_arg') is not None:
+                    for line in details.get('scons_arg'):
+                        scons_arg.append(line)
+                scons_arg_str=' '.join(scons_arg) if scons_arg else ' '
+                print(f"::group::\tCompiling yml project: =={count}==={name}=scons_arg={scons_arg_str}==")
+                res = build_bsp(bsp, scons_arg_str,name=name)
+                if not res:
+                    print(f"::error::build {bsp} {name} failed.")
+                    add_summary(f'\t- ❌ build {bsp} {name} failed.')
+                    failed += 1
+                else:
+                    add_summary(f'\t- ✅ build {bsp} {name} success.')
+                print("::endgroup::")
+
+                shutil.copyfile(config_bacakup, config_file)
+                os.remove(config_bacakup)
+
         attach_dir = os.path.join(rtt_root, 'bsp', bsp, '.ci/attachconfig')
         attach_list = []
         for root, dirs, files in os.walk(attach_dir):
             for file in files:
-                file_path = os.path.join(root, file)
-                relative_path = os.path.relpath(file_path, attach_dir)
-                attach_list.append(relative_path)
+                if file.endswith('attach'):
+                    file_path = os.path.join(root, file)
+                    relative_path = os.path.relpath(file_path, attach_dir)
+                    attach_list.append(relative_path)
 
         for attach_file in attach_list:
             count += 1

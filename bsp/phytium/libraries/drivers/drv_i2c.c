@@ -12,6 +12,7 @@
  */
 #include "rtconfig.h"
 #include <rtdevice.h>
+#include <string.h>
 #define LOG_TAG      "i2c_drv"
 #include "drv_log.h"
 #include "drv_i2c.h"
@@ -20,12 +21,16 @@
 #include "fio_mux.h"
 #include "fmio_hw.h"
 #include "fmio.h"
-#include "drivers/i2c.h"
+#include "drivers/dev_i2c.h"
 #include "fparameters.h"
 #ifdef RT_USING_SMART
     #include <ioremap.h>
 #endif
 
+/*Please define the length of the mem_addr of the device*/
+#ifndef FI2C_DEVICE_MEMADDR_LEN
+    #define FI2C_DEVICE_MEMADDR_LEN 2
+#endif
 #define FI2C_DEFAULT_ID 0
 #define I2C_USE_MIO
 #if defined(I2C_USE_MIO)
@@ -114,7 +119,7 @@ static rt_err_t i2c_mio_config(struct phytium_i2c_bus *i2c_bus)
         return -RT_ERROR;
     }
     mio_handle.is_ready = 0;
-    memset(&mio_handle, 0, sizeof(mio_handle));
+    rt_memset(&mio_handle, 0, sizeof(mio_handle));
 
     return RT_EOK;
 }
@@ -165,17 +170,25 @@ static rt_ssize_t i2c_master_xfer(struct rt_i2c_bus_device *device, struct rt_i2
     RT_ASSERT(device);
     u32 ret;
     struct rt_i2c_msg *pmsg;
+    rt_ssize_t i;
     struct phytium_i2c_bus *i2c_bus;
     i2c_bus = (struct phytium_i2c_bus *)(device);
-    u8 mem_addr = msgs->buf[0];
+    uintptr mem_addr = 0;
 
-    for (int i = 0; i < num; i++)
+    for (i = 0; i < num; i++)
     {
-        pmsg = i2c_bus->msg = &msgs[i];
+        pmsg = &msgs[i];
+        for (u32 j = 0; j <FI2C_DEVICE_MEMADDR_LEN; j++)
+        {
+            mem_addr |= msgs[i].buf[j] << (8 * (FI2C_DEVICE_MEMADDR_LEN - 1 - j));
+        }
+
         i2c_bus->i2c_handle.config.slave_addr = pmsg->addr;
+
         if (pmsg->flags & RT_I2C_RD)
         {
-            ret = FI2cMasterReadPoll(&i2c_bus->i2c_handle, mem_addr, 1, &pmsg->buf[0], sizeof(pmsg->buf));
+            rt_thread_delay(100);
+            ret = FI2cMasterReadPoll(&i2c_bus->i2c_handle, mem_addr, FI2C_DEVICE_MEMADDR_LEN, &pmsg->buf[0], pmsg->len - FI2C_DEVICE_MEMADDR_LEN);
             if (ret != FI2C_SUCCESS)
             {
                 LOG_E("I2C master read failed!\n");
@@ -184,7 +197,8 @@ static rt_ssize_t i2c_master_xfer(struct rt_i2c_bus_device *device, struct rt_i2
         }
         else
         {
-            ret = FI2cMasterWritePoll(&i2c_bus->i2c_handle, mem_addr, 1, &pmsg->buf[1], sizeof(pmsg->buf) - 1);
+            rt_thread_delay(100);
+            ret = FI2cMasterWritePoll(&i2c_bus->i2c_handle, mem_addr, FI2C_DEVICE_MEMADDR_LEN, &pmsg->buf[FI2C_DEVICE_MEMADDR_LEN], pmsg->len - FI2C_DEVICE_MEMADDR_LEN);
             if (ret != FI2C_SUCCESS)
             {
                 LOG_E("I2C master write failed!\n");
@@ -193,7 +207,7 @@ static rt_ssize_t i2c_master_xfer(struct rt_i2c_bus_device *device, struct rt_i2
         }
     }
 
-    return RT_EOK;
+    return i;
 }
 
 static const struct rt_i2c_bus_device_ops _i2c_ops =
@@ -244,62 +258,62 @@ static int i2c_mio_init(struct phytium_i2c_bus *i2c_mio_bus)
 #endif
 
 #if defined(RT_USING_I2C0)
-static struct phytium_i2c_bus i2c_controller0_bus;
+    static struct phytium_i2c_bus i2c_controller0_bus;
 #endif
 #if defined(RT_USING_I2C1)
-static struct phytium_i2c_bus i2c_controller1_bus;
+    static struct phytium_i2c_bus i2c_controller1_bus;
 #endif
 #if defined(RT_USING_I2C2)
-static struct phytium_i2c_bus i2c_controller2_bus;
+    static struct phytium_i2c_bus i2c_controller2_bus;
 #endif
 
 #if defined(RT_USING_MIO0)
-static struct phytium_i2c_bus i2c_mio0_bus;
+    static struct phytium_i2c_bus i2c_mio0_bus;
 #endif
 #if defined(RT_USING_MIO1)
-static struct phytium_i2c_bus i2c_mio1_bus;
+    static struct phytium_i2c_bus i2c_mio1_bus;
 #endif
 #if defined(RT_USING_MIO2)
-static struct phytium_i2c_bus i2c_mio2_bus;
+    static struct phytium_i2c_bus i2c_mio2_bus;
 #endif
 #if defined(RT_USING_MIO3)
-static struct phytium_i2c_bus i2c_mio3_bus;
+    static struct phytium_i2c_bus i2c_mio3_bus;
 #endif
 #if defined(RT_USING_MIO4)
-static struct phytium_i2c_bus i2c_mio4_bus;
+    static struct phytium_i2c_bus i2c_mio4_bus;
 #endif
 #if defined(RT_USING_MIO5)
-static struct phytium_i2c_bus i2c_mio5_bus;
+    static struct phytium_i2c_bus i2c_mio5_bus;
 #endif
 #if defined(RT_USING_MIO6)
-static struct phytium_i2c_bus i2c_mio6_bus;
+    static struct phytium_i2c_bus i2c_mio6_bus;
 #endif
 #if defined(RT_USING_MIO7)
-static struct phytium_i2c_bus i2c_mio7_bus;
+    static struct phytium_i2c_bus i2c_mio7_bus;
 #endif
 #if defined(RT_USING_MIO8)
-static struct phytium_i2c_bus i2c_mio8_bus;
+    static struct phytium_i2c_bus i2c_mio8_bus;
 #endif
 #if defined(RT_USING_MIO9)
-static struct phytium_i2c_bus i2c_mio9_bus;
+    static struct phytium_i2c_bus i2c_mio9_bus;
 #endif
 #if defined(RT_USING_MIO10)
-static struct phytium_i2c_bus i2c_mio10_bus;
+    static struct phytium_i2c_bus i2c_mio10_bus;
 #endif
 #if defined(RT_USING_MIO11)
-static struct phytium_i2c_bus i2c_mio11_bus;
+    static struct phytium_i2c_bus i2c_mio11_bus;
 #endif
 #if defined(RT_USING_MIO12)
-static struct phytium_i2c_bus i2c_mio12_bus;
+    static struct phytium_i2c_bus i2c_mio12_bus;
 #endif
 #if defined(RT_USING_MIO13)
-static struct phytium_i2c_bus i2c_mio13_bus;
+    static struct phytium_i2c_bus i2c_mio13_bus;
 #endif
 #if defined(RT_USING_MIO14)
-static struct phytium_i2c_bus i2c_mio14_bus;
+    static struct phytium_i2c_bus i2c_mio14_bus;
 #endif
 #if defined(RT_USING_MIO15)
-static struct phytium_i2c_bus i2c_mio15_bus;
+    static struct phytium_i2c_bus i2c_mio15_bus;
 #endif
 
 int rt_hw_i2c_init(void)

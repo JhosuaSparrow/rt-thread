@@ -34,9 +34,19 @@ static void avr32_i2c_gpio_init(struct avr32_i2c *i2c)
 
     rt_pin_mode(cfg->scl, PIN_MODE_OUTPUT_OD);
     gpio_set_gpio_open_drain_pin(cfg->scl);
-    
+
     rt_pin_mode(cfg->sda, PIN_MODE_OUTPUT_OD);
     gpio_set_gpio_open_drain_pin(cfg->sda);
+}
+
+static void avr32_i2c_pin_init(void)
+{
+    rt_size_t obj_num = sizeof(i2c_obj) / sizeof(struct avr32_i2c);
+
+    for(rt_size_t i = 0; i < obj_num; i++)
+    {
+        avr32_i2c_gpio_init(&i2c_obj[i]);
+    }
 }
 
 /**
@@ -50,11 +60,11 @@ static void avr32_set_sda(void *data, rt_int32_t state)
     struct avr32_soft_i2c_config* cfg = (struct avr32_soft_i2c_config*)data;
     if (state)
     {
-	gpio_set_gpio_open_drain_pin(cfg->sda);
+    gpio_set_gpio_open_drain_pin(cfg->sda);
     }
     else
     {
-	gpio_clr_gpio_open_drain_pin(cfg->sda);
+    gpio_clr_gpio_open_drain_pin(cfg->sda);
     }
 }
 
@@ -69,11 +79,11 @@ static void avr32_set_scl(void *data, rt_int32_t state)
     struct avr32_soft_i2c_config* cfg = (struct avr32_soft_i2c_config*)data;
     if (state)
     {
-	gpio_set_gpio_open_drain_pin(cfg->scl);
+    gpio_set_gpio_open_drain_pin(cfg->scl);
     }
     else
     {
-	gpio_clr_gpio_open_drain_pin(cfg->scl);
+    gpio_clr_gpio_open_drain_pin(cfg->scl);
     }
 }
 
@@ -102,13 +112,15 @@ static rt_int32_t avr32_get_scl(void *data)
 static const struct rt_i2c_bit_ops avr32_bit_ops_default =
 {
     .data     = RT_NULL,
+    .pin_init = avr32_i2c_pin_init,
     .set_sda  = avr32_set_sda,
     .set_scl  = avr32_set_scl,
     .get_sda  = avr32_get_sda,
     .get_scl  = avr32_get_scl,
     .udelay   = rt_hw_us_delay,
     .delay_us = 1,
-    .timeout  = 100
+    .timeout  = 100,
+    .i2c_pin_init_flag = RT_FALSE
 };
 
 /**
@@ -126,10 +138,10 @@ static rt_err_t avr32_i2c_bus_unlock(const struct avr32_soft_i2c_config *cfg)
     {
         while (i++ < 9)
         {
-	    gpio_set_gpio_open_drain_pin(cfg->scl);
-	    rt_hw_us_delay(100);
-	    gpio_clr_gpio_open_drain_pin(cfg->scl);
-	    rt_hw_us_delay(100);
+        gpio_set_gpio_open_drain_pin(cfg->scl);
+        rt_hw_us_delay(100);
+        gpio_clr_gpio_open_drain_pin(cfg->scl);
+        rt_hw_us_delay(100);
         }
     }
     if (PIN_LOW == gpio_get_gpio_open_drain_pin_output_value(cfg->sda))
@@ -150,9 +162,9 @@ int rt_sw_i2c_init(void)
     {
         i2c_obj[i].ops = avr32_bit_ops_default;
         i2c_obj[i].ops.data = (void*)&soft_i2c_config[i];
-        i2c_obj[i].i2c2_bus.priv = &i2c_obj[i].ops;
-        avr32_i2c_gpio_init(&i2c_obj[i]);
-        result = rt_i2c_bit_add_bus(&i2c_obj[i].i2c2_bus, soft_i2c_config[i].bus_name);
+        i2c_obj[i].i2c_bus.priv = &i2c_obj[i].ops;
+
+        result = rt_i2c_bit_add_bus(&i2c_obj[i].i2c_bus, soft_i2c_config[i].bus_name);
         RT_ASSERT(result == RT_EOK);
         avr32_i2c_bus_unlock(&soft_i2c_config[i]);
 

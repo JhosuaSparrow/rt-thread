@@ -282,7 +282,8 @@ rt_err_t rt_pwm_set_phase(struct rt_device_pwm *device, int channel, rt_uint32_t
 
     return result;
 }
-rt_err_t rt_pwm_get(struct rt_device_pwm *device, struct rt_pwm_configuration *cfg)
+
+static rt_err_t rt_pwm_get(struct rt_device_pwm *device, struct rt_pwm_configuration *cfg)
 {
     rt_err_t result = RT_EOK;
 
@@ -313,7 +314,8 @@ enum pwm_list_parameters
 };
 
 CMD_OPTIONS_STATEMENT(pwm_list)
-int pwm_list(int argc, char **argv)
+
+static int pwm_list(int argc, char **argv)
 {
     rt_err_t result = -RT_ERROR;
     char *result_str;
@@ -329,10 +331,12 @@ int pwm_list(int argc, char **argv)
                 pwm_device = (struct rt_device_pwm *)rt_device_find(argv[2]);
                 result_str = (pwm_device == RT_NULL) ? "failure" : "success";
                 rt_kprintf("probe %s %s\n", argv[2], result_str);
+                return (pwm_device == RT_NULL) ? -RT_ERROR : RT_EOK;
             }
             else
             {
                 rt_kprintf("pwm probe <device name>                  - probe pwm by name\n");
+                return -RT_EINVAL;
             }
         }
         else if (pwm_device == RT_NULL)
@@ -418,7 +422,6 @@ int pwm_list(int argc, char **argv)
 
         default:
             goto _usage;
-            break;
         }
     }
     else

@@ -87,6 +87,7 @@ def IARProject(target, script):
 
     CPPPATH = []
     CPPDEFINES = []
+    LOCAL_CPPDEFINES = []
     LINKFLAGS = ''
     CFLAGS = ''
     Libs = []
@@ -114,6 +115,9 @@ def IARProject(target, script):
         # get each group's definitions
         if 'CPPDEFINES' in group and group['CPPDEFINES']:
             CPPDEFINES += group['CPPDEFINES']
+
+        if 'LOCAL_CPPDEFINES' in group and group['LOCAL_CPPDEFINES']:
+            LOCAL_CPPDEFINES += group['LOCAL_CPPDEFINES']
 
         # get each group's link flags
         if 'LINKFLAGS' in group and group['LINKFLAGS']:
@@ -154,6 +158,10 @@ def IARProject(target, script):
                 state = SubElement(option, 'state')
                 state.text = define
 
+            for define in LOCAL_CPPDEFINES:
+                state = SubElement(option, 'state')
+                state.text = define
+
         if name.text == 'IlinkAdditionalLibs':
             for path in Libs:
                 state = SubElement(option, 'state')
@@ -175,14 +183,12 @@ def IARPath():
     # backup environ
     old_environ = os.environ
     os.environ['RTT_CC'] = 'iar'
-    utils.ReloadModule(rtconfig)
 
     # get iar path
     path = rtconfig.EXEC_PATH
 
     # restore environ
     os.environ = old_environ
-    utils.ReloadModule(rtconfig)
 
     return path
 

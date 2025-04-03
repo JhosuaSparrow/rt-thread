@@ -31,6 +31,7 @@
  * 2020-04-07     chenhui      add clear
  * 2022-07-02     Stanley Lwin add list command
  * 2023-09-15     xqyjlj       perf rt_hw_interrupt_disable/enable
+ * 2024-02-09     Bernard      fix the version command
  */
 
 #include <rthw.h>
@@ -51,13 +52,13 @@ static long clear(void)
 }
 MSH_CMD_EXPORT(clear, clear the terminal screen);
 
-static long rtthread_version(void)
+static long version(void)
 {
     rt_show_version();
 
     return 0;
 }
-MSH_CMD_EXPORT(rtthread_version, show RT-Thread version information);
+MSH_CMD_EXPORT(version, show RT-Thread version information);
 
 rt_inline void object_split(int len)
 {
@@ -215,15 +216,23 @@ long list_thread(void)
                     rt_uint8_t *ptr;
 
 #ifdef RT_USING_SMP
-                    if (thread->oncpu != RT_CPU_DETACHED)
-                        rt_kprintf("%-*.*s %3d %3d %4d ", maxlen, RT_NAME_MAX, thread->parent.name, thread->oncpu, thread->bind_cpu, thread->current_priority);
+                    /* no synchronization applied since it's only for debug */
+                    if (RT_SCHED_CTX(thread).oncpu != RT_CPU_DETACHED)
+                        rt_kprintf("%-*.*s %3d %3d %4d ", maxlen, RT_NAME_MAX,
+                                   thread->parent.name, RT_SCHED_CTX(thread).oncpu,
+                                   RT_SCHED_CTX(thread).bind_cpu,
+                                   RT_SCHED_PRIV(thread).current_priority);
                     else
-                        rt_kprintf("%-*.*s N/A %3d %4d ", maxlen, RT_NAME_MAX, thread->parent.name, thread->bind_cpu, thread->current_priority);
+                        rt_kprintf("%-*.*s N/A %3d %4d ", maxlen, RT_NAME_MAX,
+                                   thread->parent.name,
+                                   RT_SCHED_CTX(thread).bind_cpu,
+                                   RT_SCHED_PRIV(thread).current_priority);
 
 #else
-                    rt_kprintf("%-*.*s %3d ", maxlen, RT_NAME_MAX, thread->parent.name, thread->current_priority);
+                    /* no synchronization applied since it's only for debug */
+                    rt_kprintf("%-*.*s %3d ", maxlen, RT_NAME_MAX, thread->parent.name, RT_SCHED_PRIV(thread).current_priority);
 #endif /*RT_USING_SMP*/
-                    stat = (thread->stat & RT_THREAD_STAT_MASK);
+                    stat = (RT_SCHED_CTX(thread).stat & RT_THREAD_STAT_MASK);
                     if (stat == RT_THREAD_READY)        rt_kprintf(" ready  ");
                     else if ((stat & RT_THREAD_SUSPEND_MASK) == RT_THREAD_SUSPEND_MASK) rt_kprintf(" suspend");
                     else if (stat == RT_THREAD_INIT)    rt_kprintf(" init   ");
@@ -249,7 +258,7 @@ long list_thread(void)
                                thread->stack_size,
                                (thread->stack_size - ((rt_ubase_t) ptr - (rt_ubase_t) thread->stack_addr)) * 100
                                / thread->stack_size,
-                               thread->remaining_tick,
+                               RT_SCHED_PRIV(thread).remaining_tick,
                                rt_strerror(thread->error),
                                thread);
 #endif
@@ -260,21 +269,6 @@ long list_thread(void)
     while (next != (rt_list_t *)RT_NULL);
 
     return 0;
-}
-
-static void show_wait_queue(struct rt_list_node *list)
-{
-    struct rt_thread *thread;
-    struct rt_list_node *node;
-
-    for (node = list->next; node != list; node = node->next)
-    {
-        thread = rt_list_entry(node, struct rt_thread, tlist);
-        rt_kprintf("%.*s", RT_NAME_MAX, thread->parent.name);
-
-        if (node->next != list)
-            rt_kprintf("/");
-    }
 }
 
 #ifdef RT_USING_SEMAPHORE
@@ -325,7 +319,7 @@ long list_sem(void)
                                sem->parent.parent.name,
                                sem->value,
                                rt_list_len(&sem->parent.suspend_thread));
-                    show_wait_queue(&(sem->parent.suspend_thread));
+                    rt_susp_list_print(&(sem->parent.suspend_thread));
                     rt_kprintf("\n");
                 }
                 else
@@ -394,7 +388,7 @@ long list_event(void)
                                e->parent.parent.name,
                                e->set,
                                rt_list_len(&e->parent.suspend_thread));
-                    show_wait_queue(&(e->parent.suspend_thread));
+                    rt_susp_list_print(&(e->parent.suspend_thread));
                     rt_kprintf("\n");
                 }
                 else
@@ -459,11 +453,11 @@ long list_mutex(void)
                            maxlen, RT_NAME_MAX,
                            m->parent.parent.name,
                            RT_NAME_MAX,
-                           m->owner->parent.name,
+                           (m->owner == RT_NULL) ? "(null)" : m->owner->parent.name,
                            m->hold,
                            m->priority,
                            rt_list_len(&m->parent.suspend_thread));
-                    show_wait_queue(&(m->parent.suspend_thread));
+                    rt_susp_list_print(&(m->parent.suspend_thread));
                     rt_kprintf("\n");
                 }
                 else
@@ -472,7 +466,7 @@ long list_mutex(void)
                            maxlen, RT_NAME_MAX,
                            m->parent.parent.name,
                            RT_NAME_MAX,
-                           m->owner->parent.name,
+                           (m->owner == RT_NULL) ? "(null)" : m->owner->parent.name,
                            m->hold,
                            m->priority,
                            rt_list_len(&m->parent.suspend_thread));
@@ -536,7 +530,7 @@ long list_mailbox(void)
                                m->entry,
                                m->size,
                                rt_list_len(&m->parent.suspend_thread));
-                    show_wait_queue(&(m->parent.suspend_thread));
+                    rt_susp_list_print(&(m->parent.suspend_thread));
                     rt_kprintf("\n");
                 }
                 else
@@ -606,7 +600,7 @@ long list_msgqueue(void)
                                m->parent.parent.name,
                                m->entry,
                                rt_list_len(&m->parent.suspend_thread));
-                    show_wait_queue(&(m->parent.suspend_thread));
+                    rt_susp_list_print(&(m->parent.suspend_thread));
                     rt_kprintf("\n");
                 }
                 else
@@ -743,7 +737,7 @@ long list_mempool(void)
                                mp->block_total_count,
                                mp->block_free_count,
                                suspend_thread_count);
-                    show_wait_queue(&(mp->suspend_thread));
+                    rt_susp_list_print(&(mp->suspend_thread));
                     rt_kprintf("\n");
                 }
                 else
@@ -1083,7 +1077,6 @@ static int cmd_list(int argc, char **argv)
 #endif /* RT_USING_DFS */
         default:
             goto _usage;
-            break;
         };
 
         return 0;

@@ -30,6 +30,7 @@ STM32 系列 BSP 目前支持情况如下表所示：
 | [stm32f407-rt-spark](stm32f407-rt-spark)                       | 睿赛德官方 F407 星火一号开发板                 |
 | [stm32f401-st-nucleo](stm32f401-st-nucleo)                     | ST 官方 STM32F401 Nucleo-64 开发板      |
 | [stm32f405-smdz-breadfruit](stm32f405-smdz-breadfruit)         | 三木电子 SM1432F405 开发板                |
+| [stm32f407-lckfb-skystar](stm32f407-lckfb-skystar)             | 立创开发板 天空星STM32F407开发板        |
 | [stm32f407-atk-explorer](stm32f407-atk-explorer)               | 正点原子 F407 探索者开发板                   |
 | [stm32f407-robomaster-c](stm32f407-robomaster-c)               | 大疆公司 RoboMaster C型开发板              |
 | [stm32f407-st-discovery](stm32f407-st-discovery)               | ST 官方 STM32F407-discovery 开发板      |
@@ -46,6 +47,7 @@ STM32 系列 BSP 目前支持情况如下表所示：
 | [stm32f429-st-disco](stm32f429-st-disco)                       | ST 官方 STM32F429-discovery 开发板      |
 | [stm32f446-st-nucleo](stm32f446-st-nucleo)                     | ST 官方 STM32F446-nucleo 开发板         |
 | [stm32f469-st-disco](stm32f469-st-disco)                       | ST 官方 STM32F469-discovery 开发板      |
+| [stm32f407-fk407m2-zgt6](stm32f407-fk407m2-zgt6)                       | 反客科技 FK407M2-ZGT6 开发板      |
 | **F7 系列**                                                      |                                    |
 | [stm32f746-st-disco](stm32f746-st-disco)                       | ST 官方 STM32F746-discovery 开发板      |
 | [stm32f767-atk-apollo](stm32f767-atk-apollo)                   | 正点原子 F767 阿波罗开发板                   |

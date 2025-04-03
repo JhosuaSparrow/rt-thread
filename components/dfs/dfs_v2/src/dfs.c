@@ -139,7 +139,7 @@ void dfs_unlock(void)
     rt_mutex_release(&fslock);
 }
 
-/** @addtogroup DFS
+/** @addtogroup group_DFS
  *
  *
  *  @{
@@ -190,8 +190,35 @@ int dfs_init(void)
 }
 INIT_PREV_EXPORT(dfs_init);
 
+struct dfs_file* dfs_file_create(void)
+{
+    struct dfs_file *file;
+
+    file = (struct dfs_file *)rt_calloc(1, sizeof(struct dfs_file));
+    if (file)
+    {
+        file->magic = DFS_FD_MAGIC;
+        file->ref_count = 1;
+        rt_mutex_init(&file->pos_lock, "fpos", RT_IPC_FLAG_PRIO);
+    }
+
+    return file;
+}
+
+void dfs_file_destroy(struct dfs_file *file)
+{
+    rt_mutex_detach(&file->pos_lock);
+
+    if (file->mmap_context)
+    {
+        rt_free(file->mmap_context);
+    }
+
+    rt_free(file);
+}
+
 /**
- * @ingroup Fd
+ * @ingroup group_Fd
  * This function will allocate a file descriptor.
  *
  * @return -1 on failed or the allocated file descriptor.
@@ -217,13 +244,10 @@ int fdt_fd_new(struct dfs_fdtable *fdt)
     {
         struct dfs_file *file;
 
-        file = (struct dfs_file *)rt_calloc(1, sizeof(struct dfs_file));
+        file = dfs_file_create();
 
         if (file)
         {
-            file->magic = DFS_FD_MAGIC;
-            file->ref_count = 1;
-            rt_mutex_init(&file->pos_lock, "fpos", RT_IPC_FLAG_PRIO);
             fdt->fds[idx] = file;
 
             LOG_D("allocate a new fd @ %d", idx);
@@ -255,14 +279,7 @@ void fdt_fd_release(struct dfs_fdtable *fdt, int fd)
 
         if (file && file->ref_count == 1)
         {
-            rt_mutex_detach(&file->pos_lock);
-
-            if (file->mmap_context)
-            {
-                rt_free(file->mmap_context);
-            }
-
-            rt_free(file);
+            dfs_file_destroy(file);
         }
         else
         {
@@ -274,7 +291,7 @@ void fdt_fd_release(struct dfs_fdtable *fdt, int fd)
 }
 
 /**
- * @ingroup Fd
+ * @ingroup group_Fd
  *
  * This function will return a file descriptor structure according to file
  * descriptor.
@@ -352,7 +369,7 @@ int fd_new(void)
 }
 
 /**
- * @ingroup Fd
+ * @ingroup group_Fd
  *
  * This function will put the file descriptor.
  */
@@ -537,6 +554,7 @@ int dfs_dup(int oldfd, int startfd)
     fdt = dfs_fdtable_get();
     if ((oldfd < 0) || (oldfd >= fdt->maxfd))
     {
+        rt_set_errno(-EBADF);
         goto exit;
     }
     if (!fdt->fds[oldfd])
@@ -557,18 +575,128 @@ exit:
     return newfd;
 }
 
+/**
+ * @brief  The fd in the current process dup to designate fd table.
+ *
+ * @param  oldfd is the fd in current process.
+ *
+ * @param  fdtab is the fd table to dup, if empty, use global (_fdtab).
+ *
+ * @return -1 on failed or the allocated file descriptor.
+ */
+int dfs_dup_to(int oldfd, struct dfs_fdtable *fdtab)
+{
+    int newfd = -1;
+    struct dfs_fdtable *fdt = NULL;
+
+    if (dfs_file_lock() != RT_EOK)
+    {
+        return -RT_ENOSYS;
+    }
+
+    if (fdtab == NULL)
+    {
+        fdtab = &_fdtab;
+    }
+
+    /* check old fd */
+    fdt = dfs_fdtable_get();
+    if ((oldfd < 0) || (oldfd >= fdt->maxfd))
+    {
+        goto exit;
+    }
+    if (!fdt->fds[oldfd])
+    {
+        goto exit;
+    }
+    /* get a new fd*/
+    newfd = _fdt_slot_alloc(fdtab, DFS_STDIO_OFFSET);
+    if (newfd >= 0)
+    {
+        fdtab->fds[newfd] = fdt->fds[oldfd];
+
+        /* inc ref_count */
+        rt_atomic_add(&(fdtab->fds[newfd]->ref_count), 1);
+    }
+exit:
+    dfs_file_unlock();
+
+    return newfd;
+}
+
+/**
+ * @brief  The fd in the designate fd table dup to current process.
+ *
+ * @param  oldfd is the fd in the designate fd table.
+ *
+ * @param  fdtab is the fd table for oldfd, if empty, use global (_fdtab).
+ *
+ * @return -1 on failed or the allocated file descriptor.
+ */
+int dfs_dup_from(int oldfd, struct dfs_fdtable *fdtab)
+{
+    int newfd = -1;
+    struct dfs_file *file;
+
+    if (dfs_file_lock() != RT_EOK)
+    {
+        return -RT_ENOSYS;
+    }
+
+    if (fdtab == NULL)
+    {
+        fdtab = &_fdtab;
+    }
+
+    /* check old fd */
+    if ((oldfd < 0) || (oldfd >= fdtab->maxfd))
+    {
+        goto exit;
+    }
+    if (!fdtab->fds[oldfd])
+    {
+        goto exit;
+    }
+    /* get a new fd*/
+    newfd = fd_new();
+    file = fd_get(newfd);
+    if (newfd >= 0 && file)
+    {
+        file->mode = fdtab->fds[oldfd]->mode;
+        file->flags = fdtab->fds[oldfd]->flags;
+        file->fops = fdtab->fds[oldfd]->fops;
+        file->dentry = dfs_dentry_ref(fdtab->fds[oldfd]->dentry);
+        file->vnode = fdtab->fds[oldfd]->vnode;
+        file->mmap_context = RT_NULL;
+        file->data = fdtab->fds[oldfd]->data;
+    }
+
+    dfs_file_close(fdtab->fds[oldfd]);
+
+exit:
+    fdt_fd_release(fdtab, oldfd);
+    dfs_file_unlock();
+
+    return newfd;
+}
+
 #ifdef RT_USING_SMART
 sysret_t sys_dup(int oldfd)
 #else
 int sys_dup(int oldfd)
 #endif
 {
+    int err = 0;
     int newfd = dfs_dup(oldfd, (dfs_fdtable_get() == &_fdtab) ? DFS_STDIO_OFFSET : 0);
+    if(newfd < 0)
+    {
+        err = rt_get_errno();
+    }
 
 #ifdef RT_USING_SMART
-    return (sysret_t)newfd;
+    return err < 0 ? err : newfd;
 #else
-    return newfd;
+    return err < 0 ? err : newfd;
 #endif
 }
 
@@ -856,7 +984,11 @@ int dfs_fd_dump(int argc, char** argv)
 {
     int index;
 
-    dfs_file_lock();
+    if (dfs_file_lock() != RT_EOK)
+    {
+        return -RT_ENOSYS;
+    }
+
     for (index = 0; index < _fdtab.maxfd; index++)
     {
         struct dfs_file *file = _fdtab.fds[index];
